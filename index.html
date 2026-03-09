@@ -740,7 +740,7 @@ body::before {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 28px;
+  gap: 24px;
   transition: opacity 0.5s, visibility 0.5s;
 }
 .loading-overlay.hidden {
@@ -760,20 +760,89 @@ body::before {
   font-size: 15px;
   color: var(--text2);
   letter-spacing: 0.5px;
+}
+
+/* Log Console */
+.lo-log-console {
+  width: 520px;
+  max-width: 90vw;
+  max-height: 360px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.lo-log-header {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+  flex-shrink: 0;
 }
-.loading-overlay .lo-dots::after {
-  content: '';
-  animation: dots 1.4s steps(4, end) infinite;
+.lo-log-header .lo-log-dots {
+  display: flex;
+  gap: 5px;
 }
-@keyframes dots {
-  0%  { content: ''; }
-  25% { content: '.'; }
-  50% { content: '..'; }
-  75% { content: '...'; }
-  100%{ content: '....'; }
+.lo-log-header .lo-log-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.lo-log-header .lo-log-dots span:nth-child(1) { background: #ef4444; }
+.lo-log-header .lo-log-dots span:nth-child(2) { background: #eab308; }
+.lo-log-header .lo-log-dots span:nth-child(3) { background: #22c55e; }
+.lo-log-body {
+  padding: 10px 14px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.lo-log-body::-webkit-scrollbar { width: 4px; }
+.lo-log-body::-webkit-scrollbar-track { background: transparent; }
+.lo-log-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.lo-log-line {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.9;
+  display: flex;
+  gap: 8px;
+  animation: logFadeIn 0.25s ease both;
+}
+@keyframes logFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.lo-log-time {
+  color: var(--text2);
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+.lo-log-msg {
+  color: var(--text2);
+}
+.lo-log-msg.ok { color: #4ade80; }
+.lo-log-msg.info { color: var(--accent2); }
+.lo-log-msg.warn { color: #eab308; }
+.lo-log-msg.err { color: #f87171; }
+.lo-log-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  background: var(--accent);
+  animation: blink 1s step-end infinite;
+  vertical-align: middle;
+  margin-left: 2px;
+  border-radius: 1px;
+}
+@keyframes blink {
+  50% { opacity: 0; }
 }
 </style>
 </head>
@@ -781,7 +850,14 @@ body::before {
 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="lo-spinner"></div>
-  <div class="lo-text">正在连接QQ图库系统<span class="lo-dots"></span></div>
+  <div class="lo-text">正在连接至图库，请耐心等待10s ...</div>
+  <div class="lo-log-console">
+    <div class="lo-log-header">
+      <div class="lo-log-dots"><span></span><span></span><span></span></div>
+      <span>console — ai-gallery</span>
+    </div>
+    <div class="lo-log-body" id="loLogBody"></div>
+  </div>
 </div>
 
 <div class="header">
@@ -862,12 +938,40 @@ let searchQQ = '';
 let lbMetaVisible = false;
 let currentFullMetaText = '';
 
+/* ===== BOOT LOG SYSTEM ===== */
+
+const bootLog = {
+  el: document.getElementById('loLogBody'),
+  startTime: Date.now(),
+  _ts() {
+    const elapsed = ((Date.now() - this.startTime) / 1000).toFixed(2);
+    return elapsed.padStart(6, ' ') + 's';
+  },
+  add(msg, cls = '') {
+    const line = document.createElement('div');
+    line.className = 'lo-log-line';
+    line.innerHTML = `<span class="lo-log-time">[${this._ts()}]</span><span class="lo-log-msg ${cls}">${msg}</span>`;
+    // Remove previous cursor
+    const prev = this.el.querySelector('.lo-log-cursor');
+    if (prev) prev.remove();
+    this.el.appendChild(line);
+    // Add blinking cursor to latest line
+    const cursor = document.createElement('span');
+    cursor.className = 'lo-log-cursor';
+    line.querySelector('.lo-log-msg').appendChild(cursor);
+    this.el.scrollTop = this.el.scrollHeight;
+  },
+  done() {
+    const cursor = this.el.querySelector('.lo-log-cursor');
+    if (cursor) cursor.remove();
+  }
+};
+
 /* ===== METADATA RENDERING (NO TRUNCATION) ===== */
 
-const COLLAPSE_THRESHOLD = 400; // chars before collapse in tooltip; full in lightbox
+const COLLAPSE_THRESHOLD = 400;
 
 function renderMetaRow(label, value, allowCollapse) {
-  // NO truncation - show everything
   const needsCollapse = allowCollapse && value.length > COLLAPSE_THRESHOLD;
   const id = 'mr_' + Math.random().toString(36).slice(2, 9);
   return `<div class="meta-row">
@@ -926,7 +1030,6 @@ function renderMetaContent(container, meta, allowCollapse) {
     }
   }
   container.innerHTML = html;
-  // Store for copy
   currentFullMetaText = allParts.join('\n\n');
 }
 
@@ -1049,7 +1152,7 @@ function loadLbMeta() {
   const cacheKey = `${currentCollection}/${item.filename}`;
 
   if (metaCache[cacheKey]) {
-    renderMetaContent(body, metaCache[cacheKey], false); // false = no collapse in lightbox
+    renderMetaContent(body, metaCache[cacheKey], false);
   } else {
     body.innerHTML = '<div class="meta-loading"><span class="mini-spinner"></span>加载元数据...</div>';
     fetch(`${API}/api/meta/${currentCollection}/${item.filename}`)
@@ -1088,24 +1191,73 @@ function quickSearchQQ(qq) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ===== INIT ===== */
+/* ===== INIT WITH BOOT LOG ===== */
 
 async function init() {
+  bootLog.add('Initializing AI Gallery system...', 'info');
+
+  await sleep(300);
+  bootLog.add('Connecting to AWS backend...', '');
+
+  await sleep(400);
+  bootLog.add('Establishing secure connection...', '');
+
   try {
+    await sleep(200);
+    bootLog.add('Fetching collection index...', '');
+
     const res = await fetch(`${API}/api/collections`);
     const data = await res.json();
     collections = data.collections;
+
+    bootLog.add(`✓ Successfully connected to backend`, 'ok');
+    bootLog.add(`✓ Found ${collections.length} collections`, 'ok');
+
+    await sleep(250);
+    bootLog.add('Loading statistics...', '');
+
+    const statsPromise = loadStats();
+
+    await sleep(200);
+    bootLog.add('Loading image data...', '');
+
+    const imagesPromise = loadImages();
+
+    await Promise.all([statsPromise, imagesPromise]);
+
+    bootLog.add('✓ Statistics loaded', 'ok');
+    bootLog.add(`✓ Image list ready (${currentItems.length} items)`, 'ok');
+
+    await sleep(200);
+    bootLog.add('Rendering UI components...', '');
     renderTabs();
-    await Promise.all([loadStats(), loadImages()]);
+
+    await sleep(300);
+    bootLog.add('✓ All resources ready, entering gallery...', 'ok');
+    bootLog.done();
+
+    await sleep(500);
     document.getElementById('loadingOverlay').classList.add('hidden');
+
   } catch (e) {
+    bootLog.add(`✗ Connection failed: ${e.message}`, 'err');
+    bootLog.add('Please check your network and refresh the page', 'warn');
+    bootLog.done();
+
     document.getElementById('gallery').innerHTML =
       `<div class="empty error">
         <div class="error-title">⚠ 无法连接后端服务</div>
         <div class="error-detail">${e.name}: ${e.message}<br>API: ${API}/api/collections</div>
       </div>`;
+
+    // Still hide overlay after a moment so user can see the error
+    await sleep(2000);
     document.getElementById('loadingOverlay').classList.add('hidden');
   }
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
 }
 
 async function loadStats() {
@@ -1279,7 +1431,6 @@ function openLightbox(index) {
 function closeLightbox() {
   document.getElementById('lightbox').classList.remove('open');
   document.body.style.overflow = '';
-  // Reset meta panel
   lbMetaVisible = false;
   document.getElementById('lbMetaPanel').classList.add('hidden');
   document.getElementById('lbMetaToggle').classList.remove('active');
@@ -1305,10 +1456,8 @@ function updateLightbox() {
 
   document.getElementById('lbDownload').href = `${API}${item.url}${item.url.includes('?') ? '&' : '?'}raw=1`;
 
-  // Show/hide meta toggle based on collection
   document.getElementById('lbMetaToggle').style.display = currentCollection === 'ai' ? '' : 'none';
 
-  // Refresh meta panel if visible
   if (lbMetaVisible && currentCollection === 'ai') {
     loadLbMeta();
   }
