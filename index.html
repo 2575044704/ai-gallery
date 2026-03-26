@@ -1187,6 +1187,74 @@ body::before {
   cursor: pointer;
 }
 
+/* Inspector Notice Box */
+.inspect-notice {
+  margin-top: 16px;
+  padding: 14px 18px;
+  background: rgba(234, 179, 8, 0.10);
+  border: 1.5px solid rgba(234, 179, 8, 0.45);
+  border-radius: 10px;
+  position: relative;
+  animation: fadeIn 0.3s;
+}
+.inspect-notice::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #eab308, #facc15, #eab308);
+  border-radius: 10px 10px 0 0;
+}
+.inspect-notice-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #facc15;
+  margin-bottom: 10px;
+}
+.inspect-notice-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.inspect-notice-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #e0dcc8;
+}
+.inspect-notice-list li .notice-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(234, 179, 8, 0.2);
+  color: #facc15;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--mono);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.inspect-notice-list li .notice-text {
+  flex: 1;
+}
+.inspect-notice-list li .notice-text strong {
+  color: #fde047;
+  font-weight: 600;
+}
+
 /* Inspect result */
 .inspect-result {
   margin-top: 20px;
@@ -1509,7 +1577,7 @@ body::before {
       <img id="lbImg" src="" alt="">
       <div class="lightbox-info" id="lbInfo"></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center">
-        <a id="lbDownload" class="lb-download-btn" download>⬇ 下载原图</a>
+        <a id="lbDownload" class="lb-download-btn" onclick="downloadOriginal(event)">⬇ 下载原图</a>
         <button class="lb-meta-toggle" id="lbMetaToggle" onclick="toggleLbMeta()">📋 元数据</button>
       </div>
     </div>
@@ -1528,7 +1596,12 @@ body::before {
   <div class="inspect-modal" id="inspectModal">
     <div class="inspect-modal-header">
       <div class="inspect-modal-title">
-        <div class="inspect-modal-title-icon">🔬</div>
+        <div class="inspect-modal-title-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
         原图数据读取
       </div>
       <button class="inspect-modal-close" onclick="closeInspectModal()">×</button>
@@ -1540,6 +1613,28 @@ body::before {
         <div class="inspect-dropzone-text">拖拽图片到这里，或点击选择文件</div>
         <div class="inspect-dropzone-hint">支持 PNG · JPEG · WebP · AVIF（最大 100MB）</div>
       </div>
+
+      <!-- Yellow Notice Box -->
+      <div class="inspect-notice" id="inspectNotice">
+        <div class="inspect-notice-title">
+          <span>⚡</span> 使用须知
+        </div>
+        <ul class="inspect-notice-list">
+          <li>
+            <span class="notice-num">1</span>
+            <span class="notice-text">目前功能最强大的AI原图数据读取。基于 <a href="https://spell.novelai.dev/" target="_blank" rel="noopener noreferrer" style="color:#facc15;text-decoration:underline;text-underline-offset:2px;transition:color 0.2s;" onmouseover="this.style.color='#fde047'" onmouseout="this.style.color='#facc15'">spell.novelai.dev</a> 进行了代码改进，使其拥有<strong>更强大的解析能力</strong>。包括可以解析使用了 <strong>RGB Alpha隐写技术</strong> 的<strong>SD Forge</strong>的生成数据</span>
+          </li>
+          <li>
+            <span class="notice-num">2</span>
+            <span class="notice-text">必须是<strong>AI生成的图片</strong>且<strong>没有被压缩过</strong>才能解析出来元数据</span>
+          </li>
+          <li>
+            <span class="notice-num">3</span>
+            <span class="notice-text">图片<strong>不会保存在服务器</strong>，请放心使用</span>
+          </li>
+        </ul>
+      </div>
+
       <div id="inspectResultArea"></div>
     </div>
   </div>
@@ -1994,6 +2089,10 @@ function handleInspectFile(file) {
   const resultArea = document.getElementById('inspectResultArea');
   const maxSize = 100 * 1024 * 1024;
 
+  // Hide the notice box when a file is uploaded
+  const notice = document.getElementById('inspectNotice');
+  if (notice) notice.style.display = 'none';
+
   if (file.size > maxSize) {
     resultArea.innerHTML = '<div class="inspect-error">文件过大，最大支持 100MB</div>';
     return;
@@ -2206,6 +2305,9 @@ function clearInspectResult() {
   inspectCurrentData = null;
   // Reset file input
   document.getElementById('inspectFileInput').value = '';
+  // Show the notice again
+  const notice = document.getElementById('inspectNotice');
+  if (notice) notice.style.display = '';
 }
 
 function copyInspectField(field) {
@@ -2232,6 +2334,36 @@ function showCopyFeedback(btn) {
     btn.style.color = '';
     btn.style.borderColor = '';
   }, 1200);
+}
+
+/* ===== DOWNLOAD ORIGINAL ===== */
+
+async function downloadOriginal(e) {
+  e.preventDefault();
+  const btn = document.getElementById('lbDownload');
+  const url = btn.dataset.url;
+  const filename = btn.dataset.filename || 'image';
+  const origText = btn.textContent;
+  btn.textContent = '⏳ 下载中...';
+  btn.style.pointerEvents = 'none';
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+    btn.textContent = '✓ 已下载';
+    setTimeout(() => { btn.textContent = origText; }, 1500);
+  } catch (err) {
+    btn.textContent = '✗ 下载失败';
+    setTimeout(() => { btn.textContent = origText; }, 2000);
+  }
+  btn.style.pointerEvents = '';
 }
 
 /* ===== INIT WITH BOOT LOG ===== */
@@ -2524,7 +2656,9 @@ function updateLightbox() {
   if (item.file_date) parts.push(`<span>${item.file_date}</span>`);
   document.getElementById('lbInfo').innerHTML = parts.join(' &nbsp;·&nbsp; ');
 
-  document.getElementById('lbDownload').href = `${API}${item.url}${item.url.includes('?') ? '&' : '?'}raw=1`;
+  const dlBtn = document.getElementById('lbDownload');
+  dlBtn.dataset.url = `${API}${item.url}${item.url.includes('?') ? '&' : '?'}raw=1`;
+  dlBtn.dataset.filename = item.filename.replace(/\.[^.]+$/, '.png');
 
   document.getElementById('lbMetaToggle').style.display = currentCollection === 'ai' ? '' : 'none';
 
