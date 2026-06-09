@@ -2435,6 +2435,25 @@ function tryParseJSON(str) {
 function showMetaTooltip(cardEl, item) {
   const tooltip = document.getElementById('metaTooltip');
   const body = document.getElementById('metaTooltipBody');
+
+  // NSFW 图片：不展示侧写 / 元数据
+  if (item.safety === 'nsfw') {
+    const rect = cardEl.getBoundingClientRect();
+    const tw = 440;
+    let left = rect.right + 12;
+    let top = rect.top;
+    if (left + tw > window.innerWidth - 16) left = rect.left - tw - 12;
+    if (left < 16) { left = Math.max(16, rect.left + rect.width / 2 - tw / 2); top = rect.bottom + 8; }
+    const maxH = window.innerHeight * 0.75;
+    if (top + maxH > window.innerHeight - 16) top = window.innerHeight - maxH - 16;
+    if (top < 8) top = 8;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+    tooltip.classList.add('visible');
+    body.innerHTML = '<div class="meta-loading" style="color:var(--text2)">该图片疑似涉嫌违规，已被举报，正等待处理。</div>';
+    return;
+  }
+
   const cacheKey = `${currentCollection}/${item.filename}`;
 
   const rect = cardEl.getBoundingClientRect();
@@ -2537,6 +2556,13 @@ function loadLbMeta() {
   const item = currentItems[lightboxIndex];
   if (!item) return;
   const body = document.getElementById('lbMetaBody');
+
+  // NSFW 图片：不展示提示词，显示违规提示
+  if (item.safety === 'nsfw') {
+    body.innerHTML = `<div class="meta-loading" style="color:var(--text2)">该图片疑似涉嫌违规，已被举报，正等待处理。</div>`;
+    return;
+  }
+
   const cacheKey = `${currentCollection}/${item.filename}`;
 
   if (metaCache[cacheKey]) {
