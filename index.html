@@ -2356,6 +2356,9 @@ body.terms-route .terms-page { display: block; }
 <script>
 const API = 'https://uqililh--ai-gallery-serve.modal.run';
 let currentCollection = 'ai';
+function hasGenerationMetadata() {
+  return currentCollection === 'ai' || currentCollection === 'tg';
+}
 let currentPage = 1;
 let totalPages = 1;
 let currentItems = [];
@@ -2445,9 +2448,20 @@ function escapeHtml(s) {
 }
 
 function renderMetaContent(container, meta, allowCollapse) {
-  const pm = meta.png_metadata;
+  currentFullMetaText = '';
+  let pm = meta.png_metadata;
   if (!pm || Object.keys(pm).length === 0) {
-    container.innerHTML = '<div class="meta-loading" style="color:var(--text2)">无 PNG Metadata</div>';
+    pm = {};
+    for (const key of ['parameters', 'prompt', 'negative_prompt', 'workflow', 'generation_data', 'metadata', 'exif']) {
+      const value = meta[key];
+      if (value != null && value !== '' &&
+          (typeof value !== 'object' || Object.keys(value).length > 0)) {
+        pm[key] = value;
+      }
+    }
+  }
+  if (Object.keys(pm).length === 0) {
+    container.innerHTML = '<div class="meta-loading" style="color:var(--text2)">未找到可显示的生成元数据</div>';
     return;
   }
   let html = '';
@@ -2517,7 +2531,7 @@ function showMetaTooltip(cardEl, item) {
     return;
   }
 
-  const cacheKey = `${currentCollection}/${item.filename}`;
+  const cacheKey = `${currentCollection}/${encodeURIComponent(item.filename)}`;
 
   const rect = cardEl.getBoundingClientRect();
   const tw = 440;
@@ -2544,7 +2558,7 @@ function showMetaTooltip(cardEl, item) {
     renderMetaContent(body, metaCache[cacheKey], true);
   } else {
     body.innerHTML = '<div class="meta-loading"><span class="mini-spinner"></span>加载中...</div>';
-    fetch(`${API}/api/meta/${currentCollection}/${item.filename}`)
+    fetch(`${API}/api/meta/${currentCollection}/${encodeURIComponent(item.filename)}`)
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(data => {
         metaCache[cacheKey] = data;
@@ -2578,7 +2592,7 @@ document.getElementById('metaTooltip').addEventListener('mouseleave', (e) => {
 
 document.getElementById('gallery').addEventListener('mouseover', e => {
   const card = e.target.closest('.card');
-  if (!card || currentCollection !== 'ai') return;
+  if (!card || !hasGenerationMetadata()) return;
   if (currentHoverCard === card) return;
   clearTimeout(hoverTimer);
   currentHoverCard = card;
@@ -2626,13 +2640,13 @@ function loadLbMeta() {
     return;
   }
 
-  const cacheKey = `${currentCollection}/${item.filename}`;
+  const cacheKey = `${currentCollection}/${encodeURIComponent(item.filename)}`;
 
   if (metaCache[cacheKey]) {
     renderMetaContent(body, metaCache[cacheKey], false);
   } else {
     body.innerHTML = '<div class="meta-loading"><span class="mini-spinner"></span>加载元数据...</div>';
-    fetch(`${API}/api/meta/${currentCollection}/${item.filename}`)
+    fetch(`${API}/api/meta/${currentCollection}/${encodeURIComponent(item.filename)}`)
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(data => {
         metaCache[cacheKey] = data;
@@ -3275,7 +3289,11 @@ async function loadStats() {
 
 function renderTabs() {
   const container = document.getElementById('tabs');
-  let tabsHtml = collections.map(c => `
+  const tabOrder = ['ai', 'nodata', 'tg'];
+  const orderedCollections = [...collections].sort((a, b) =>
+    (tabOrder.includes(a.key) ? tabOrder.indexOf(a.key) : 99) -
+    (tabOrder.includes(b.key) ? tabOrder.indexOf(b.key) : 99));
+  let tabsHtml = orderedCollections.map(c => `
     <div class="tab ${c.key === currentCollection ? 'active' : ''}"
          onclick="switchTab('${c.key}')">
       ${c.label}
@@ -3283,7 +3301,7 @@ function renderTabs() {
     </div>
   `).join('');
 
-  if (currentCollection === 'ai') {
+  if (hasGenerationMetadata()) {
     tabsHtml += `
       <div class="filter-wrap" id="filterWrap">
         <button class="filter-btn ${softwareFilter ? 'active' : ''}" id="filterBtn" onclick="toggleFilterDropdown()" title="按软件筛选">
@@ -3373,6 +3391,10 @@ function clearSearch() {
 }
 
 async function loadTagSearch(query) {
+  if (currentCollection === 'tg') {
+    searchTag = query;
+    return loadImages();
+  }
   const gallery = document.getElementById('gallery');
   gallery.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   document.getElementById('pagination').innerHTML = '';
@@ -3410,6 +3432,7 @@ async function loadTagSearch(query) {
             <span>${item.width && item.height ? item.width + '×' + item.height : ''}</span>
             ${item.software ? `<span class="card-tag ${getTagClass(item.software)}">${item.software}</span>` : ''}
           </div>
+          ${currentCollection === 'tg' ? '<div class="card-meta" style="margin-top:2px"><span>作者未知</span></div>' : ''}
           ${item.qq_sender ? `<div class="card-meta" style="margin-top:2px">
             <span class="card-qq" onclick="event.stopPropagation();quickSearchQQ('${item.qq_sender}')" title="点击搜索该QQ的所有图片">QQ: ${item.qq_sender}</span>
             ${item.group_name ? `<span style="font-size:10px;color:var(--text2)">${item.group_name}</span>` : ''}
@@ -3477,6 +3500,7 @@ async function loadImages() {
 
   try {
     let url = `${API}/api/images/${currentCollection}?page=${currentPage}`;
+    if (currentCollection === 'tg' && searchTag) url += `&tag_keyword=${encodeURIComponent(searchTag)}`;
     if (searchQQ) url += `&qq_sender=${encodeURIComponent(searchQQ)}`;
     if (softwareFilter) url += `&software=${encodeURIComponent(softwareFilter)}`;
     const res = await fetch(url);
@@ -3504,6 +3528,7 @@ async function loadImages() {
             <span>${item.width && item.height ? item.width + '×' + item.height : ''}</span>
             ${item.software ? `<span class="card-tag ${getTagClass(item.software)}">${item.software}</span>` : ''}
           </div>
+          ${currentCollection === 'tg' ? '<div class="card-meta" style="margin-top:2px"><span>作者未知</span></div>' : ''}
           ${item.qq_sender ? `<div class="card-meta" style="margin-top:2px">
             <span class="card-qq" onclick="event.stopPropagation();quickSearchQQ('${item.qq_sender}')" title="点击搜索该QQ的所有图片">QQ: ${item.qq_sender}</span>
             ${item.group_name ? `<span style="font-size:10px;color:var(--text2)">${item.group_name}</span>` : ''}
@@ -3650,9 +3675,9 @@ function updateLightbox() {
   document.getElementById('lbDownload').dataset.url = `${API}${item.url}${item.url.includes('?') ? '&' : '?'}raw=1`;
   document.getElementById('lbDownload').dataset.filename = item.filename || 'image';
 
-  document.getElementById('lbMetaToggle').style.display = currentCollection === 'ai' ? '' : 'none';
+  document.getElementById('lbMetaToggle').style.display = hasGenerationMetadata() ? '' : 'none';
 
-  if (lbMetaVisible && currentCollection === 'ai') {
+  if (lbMetaVisible && hasGenerationMetadata()) {
     loadLbMeta();
   }
 }
@@ -3674,8 +3699,8 @@ document.getElementById('lightbox').addEventListener('click', e => {
 
 function viewCardInfo(index) {
   openLightbox(index);
-  // Auto-show meta panel for AI collection
-  if (currentCollection === 'ai' && !lbMetaVisible) {
+  // Auto-show generation metadata for AI and third-party collections
+  if (hasGenerationMetadata() && !lbMetaVisible) {
     setTimeout(toggleLbMeta, 80);
   }
 }
