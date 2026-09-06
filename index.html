@@ -2356,6 +2356,10 @@ body.terms-route .terms-page { display: block; }
 <script>
 const API = 'https://uqililh--ai-gallery-serve.modal.run';
 let currentCollection = 'ai';
+function getMetadataUrl(item) {
+  return `${API}${item.meta_url || `/api/meta/${currentCollection}/${encodeURIComponent(item.filename)}`}`;
+}
+
 function hasGenerationMetadata() {
   return currentCollection === 'ai' || currentCollection === 'tg';
 }
@@ -2558,7 +2562,7 @@ function showMetaTooltip(cardEl, item) {
     renderMetaContent(body, metaCache[cacheKey], true);
   } else {
     body.innerHTML = '<div class="meta-loading"><span class="mini-spinner"></span>加载中...</div>';
-    fetch(`${API}/api/meta/${currentCollection}/${encodeURIComponent(item.filename)}`)
+    fetch(getMetadataUrl(item))
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(data => {
         metaCache[cacheKey] = data;
@@ -2646,14 +2650,14 @@ function loadLbMeta() {
     renderMetaContent(body, metaCache[cacheKey], false);
   } else {
     body.innerHTML = '<div class="meta-loading"><span class="mini-spinner"></span>加载元数据...</div>';
-    fetch(`${API}/api/meta/${currentCollection}/${encodeURIComponent(item.filename)}`)
+    fetch(getMetadataUrl(item))
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(data => {
         metaCache[cacheKey] = data;
         renderMetaContent(body, data, false);
       })
-      .catch(() => {
-        body.innerHTML = '<div class="meta-loading" style="color:var(--text2)">无元数据</div>';
+      .catch(error => {
+        body.innerHTML = `<div class="meta-loading" style="color:var(--text2)">元数据加载失败（${escapeHtml(error.message || '网络异常')}）</div>`;
       });
   }
 }
@@ -3423,11 +3427,11 @@ async function loadTagSearch(query) {
       return `
       <div class="card" data-idx="${i}" onclick="openLightbox(${i})" style="animation-delay:${i * 0.04}s">
         <div class="card-img-wrap">
-          <img src="${API}${item.thumb_url}" alt="${item.filename}" loading="lazy">
+          <img src="${API}${item.thumb_url}" alt="${escapeHtml(item.filename)}" loading="lazy">
           ${isBlurred ? `<div class="blur-overlay"><span class="blur-hint">已处理</span></div>` : ''}
         </div>
         <div class="card-info">
-          <div class="card-filename">${item.filename}</div>
+          <div class="card-filename">${escapeHtml(item.filename)}</div>
           <div class="card-meta">
             <span>${item.width && item.height ? item.width + '×' + item.height : ''}</span>
             ${item.software ? `<span class="card-tag ${getTagClass(item.software)}">${item.software}</span>` : ''}
@@ -3519,11 +3523,11 @@ async function loadImages() {
       return `
       <div class="card" data-idx="${i}" onclick="openLightbox(${i})" style="animation-delay:${i * 0.04}s">
         <div class="card-img-wrap">
-          <img src="${API}${item.thumb_url}" alt="${item.filename}" loading="lazy">
+          <img src="${API}${item.thumb_url}" alt="${escapeHtml(item.filename)}" loading="lazy">
           ${isBlurred ? `<div class="blur-overlay"><span class="blur-hint">已处理</span></div>` : ''}
         </div>
         <div class="card-info">
-          <div class="card-filename">${item.filename}</div>
+          <div class="card-filename">${escapeHtml(item.filename)}</div>
           <div class="card-meta">
             <span>${item.width && item.height ? item.width + '×' + item.height : ''}</span>
             ${item.software ? `<span class="card-tag ${getTagClass(item.software)}">${item.software}</span>` : ''}
@@ -3664,7 +3668,7 @@ function updateLightbox() {
   document.getElementById('lbImg').src = `${API}${item.url}`;
 
   const parts = [];
-  if (item.filename) parts.push(item.filename);
+  if (item.filename) parts.push(escapeHtml(item.filename));
   if (item.width && item.height) parts.push(`<span>${item.width}×${item.height}</span>`);
   if (item.software) parts.push(`<span>${item.software}</span>`);
   if (item.group_name) parts.push(`群: <span>${item.group_name}</span>`);
