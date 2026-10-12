@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="gallery-version" content="2.5.0">
 <title>原典AI 图鉴</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2382,8 +2383,12 @@ body.terms-route .terms-page { display: block; }
 <script>
 const API = 'https://uqililh--ai-gallery-serve.modal.run';
 let currentCollection = 'ai';
+function getAssetUrl(path) {
+  // Preserve server-issued signatures, including for metadata and raw downloads.
+  return new URL(path, API).href;
+}
 function getMetadataUrl(item) {
-  return `${API}${item.meta_url || `/api/meta/${currentCollection}/${encodeURIComponent(item.filename)}`}`;
+  return getAssetUrl(item.meta_url || `/api/meta/${currentCollection}/${encodeURIComponent(item.filename)}`);
 }
 
 function hasGenerationMetadata() {
@@ -2408,6 +2413,58 @@ let softwareFilter = '';
 let softwareList = [];
 let softwareListLoaded = false;
 let filterDropdownOpen = false;
+
+/* ===== v2.5.0: server-issued browsing tickets and rotating request headers ===== */
+let browseGeneration = 0;
+let browseContextKey = '';
+let browseNavigation = Object.create(null);
+
+async function fetchBrowsePage(context, page, generation) {
+  const contextKey = JSON.stringify(context);
+  if (browseContextKey !== contextKey) {
+    browseContextKey = contextKey;
+    browseNavigation = Object.create(null);
+  }
+  const isCurrent = () => generation === browseGeneration && contextKey === browseContextKey;
+  const request = async (entry) => {
+    const headers = { 'Content-Type': 'application/json' };
+    if (entry) headers[entry.header.name] = entry.header.value;
+    const res = await fetch(`${API}/api/browse${entry ? '' : '/start'}`, {
+      method: 'POST',
+      headers,
+      credentials: 'omit',
+      cache: 'no-store',
+      body: JSON.stringify(entry ? { ticket: entry.ticket } : context),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const error = new Error(typeof data.detail === 'string' ? data.detail : `HTTP ${res.status}`);
+      error.status = res.status;
+      throw error;
+    }
+    return data;
+  };
+
+  const entry = browseNavigation[String(page)];
+  let data;
+  try {
+    // The start endpoint always starts at page 1; never send an arbitrary page.
+    data = await request(entry);
+  } catch (error) {
+    if (!isCurrent()) return null;
+    if (!entry || error.status !== 403) throw error;
+    // Expired/invalid tickets get exactly one fresh start. Never retry a 429.
+    browseNavigation = Object.create(null);
+    data = await request(null);
+  }
+  if (!isCurrent()) return null;
+  if (!Array.isArray(data.items) || !Number.isInteger(data.page) || !data.guard?.navigation) {
+    throw new Error('页面数据加载失败，请刷新页面。');
+  }
+  // Replace the previous page's capabilities; the server controls every target.
+  browseNavigation = data.guard.navigation;
+  return data;
+}
 
 const SW_COLORS = {
   'novelai':  { bg: 'rgba(174,59,38,0.08)',  color: '#9A3327', dot: '#AE3B26' },
@@ -3440,7 +3497,8 @@ function doSearch() {
     searchQQ  = val;
     searchTag = '';
     document.getElementById('searchHint').innerHTML = `搜索 QQ: <span>${escapeHtml(val)}</span> 的图片...`;
-    loadImages().then(() => {
+    loadImages().then(applied => {
+      if (!applied || searchQQ !== val || searchTag) return;
       document.getElementById('searchHint').innerHTML =
         `QQ: <span>${escapeHtml(searchQQ)}</span> — 共 <span>${totalPages}</span> 页结果`;
     });
@@ -3467,18 +3525,17 @@ async function loadTagSearch(query) {
     searchTag = query;
     return loadImages();
   }
+  const generation = ++browseGeneration;
+  const context = { mode: 'search', collection: currentCollection, q: query, type: 'all' };
+  const requestedPage = currentPage;
   const gallery = document.getElementById('gallery');
   gallery.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   document.getElementById('pagination').innerHTML = '';
 
   try {
-    const url = `${API}/api/search?q=${encodeURIComponent(query)}&page=${currentPage}&page_size=20&type=all`;
-    const res  = await fetch(url);
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || `HTTP ${res.status}`);
-    }
-    const data = await res.json();
+    const data = await fetchBrowsePage(context, requestedPage, generation);
+    if (!data || generation !== browseGeneration) return false;
+    currentPage  = data.page;
     totalPages   = data.total_pages;
     currentItems = data.items;
 
@@ -3495,7 +3552,7 @@ async function loadTagSearch(query) {
       return `
       <div class="card" data-idx="${i}" onclick="openLightbox(${i})" style="animation-delay:${i * 0.04}s">
         <div class="card-img-wrap">
-          <img src="${API}${item.thumb_url}" alt="${escapeHtml(item.filename)}" loading="lazy">
+          <img src="${escapeHtml(getAssetUrl(item.thumb_url))}" alt="${escapeHtml(item.filename)}" loading="lazy">
           ${isBlurred ? `<div class="blur-overlay"><span class="blur-hint">已处理</span></div>` : ''}
         </div>
         <div class="card-info">
@@ -3527,10 +3584,11 @@ async function loadTagSearch(query) {
     renderPaginationForTag(query);
 
   } catch (e) {
+    if (generation !== browseGeneration) return false;
     gallery.innerHTML =
       `<div class="empty error">
         <div class="error-title">⚠ Tag 搜索失败</div>
-        <div class="error-detail">${e.name}: ${e.message}</div>
+        <div class="error-detail">${escapeHtml(e.name)}: ${escapeHtml(e.message)}</div>
       </div>`;
     document.getElementById('searchHint').innerHTML =
       `Tag 搜索: <span>${escapeHtml(query)}</span> — <span style="color:var(--danger)">搜索失败</span>`;
@@ -3567,23 +3625,27 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
 });
 
 async function loadImages() {
+  const generation = ++browseGeneration;
+  const context = { mode: 'images', collection: currentCollection };
+  if (currentCollection === 'tg' && searchTag) context.tag_keyword = searchTag;
+  if (searchQQ) context.qq = searchQQ;
+  if (softwareFilter) context.software = softwareFilter;
+  const requestedPage = currentPage;
   const gallery = document.getElementById('gallery');
   gallery.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  document.getElementById('pagination').innerHTML = '';
 
   try {
-    let url = `${API}/api/images/${currentCollection}?page=${currentPage}`;
-    if (currentCollection === 'tg' && searchTag) url += `&tag_keyword=${encodeURIComponent(searchTag)}`;
-    if (searchQQ) url += `&qq_sender=${encodeURIComponent(searchQQ)}`;
-    if (softwareFilter) url += `&software=${encodeURIComponent(softwareFilter)}`;
-    const res = await fetch(url);
-    const data = await res.json();
+    const data = await fetchBrowsePage(context, requestedPage, generation);
+    if (!data || generation !== browseGeneration) return false;
+    currentPage = data.page;
     totalPages = data.total_pages;
     currentItems = data.items;
 
     if (currentItems.length === 0) {
       gallery.innerHTML = '<div class="empty">暂无图片</div>';
       document.getElementById('pagination').innerHTML = '';
-      return;
+      return true;
     }
 
     gallery.innerHTML = currentItems.map((item, i) => {
@@ -3591,7 +3653,7 @@ async function loadImages() {
       return `
       <div class="card" data-idx="${i}" onclick="openLightbox(${i})" style="animation-delay:${i * 0.04}s">
         <div class="card-img-wrap">
-          <img src="${API}${item.thumb_url}" alt="${escapeHtml(item.filename)}" loading="lazy">
+          <img src="${escapeHtml(getAssetUrl(item.thumb_url))}" alt="${escapeHtml(item.filename)}" loading="lazy">
           ${isBlurred ? `<div class="blur-overlay"><span class="blur-hint">已处理</span></div>` : ''}
         </div>
         <div class="card-info">
@@ -3620,12 +3682,15 @@ async function loadImages() {
     }).join('');
 
     renderPagination();
+    return true;
   } catch (e) {
+    if (generation !== browseGeneration) return false;
     gallery.innerHTML =
       `<div class="empty error">
         <div class="error-title">⚠ 加载失败</div>
-        <div class="error-detail">${e.name}: ${e.message}<br>API: ${API}/api/images/${currentCollection}?page=${currentPage}</div>
+        <div class="error-detail">${escapeHtml(e.name)}: ${escapeHtml(e.message)}</div>
       </div>`;
+    return false;
   }
 }
 
@@ -3733,7 +3798,7 @@ function navLightbox(dir) {
 
 function updateLightbox() {
   const item = currentItems[lightboxIndex];
-  document.getElementById('lbImg').src = `${API}${item.url}`;
+  document.getElementById('lbImg').src = getAssetUrl(item.url);
 
   const parts = [];
   if (item.filename) parts.push(escapeHtml(item.filename));
@@ -3744,7 +3809,9 @@ function updateLightbox() {
   if (item.file_date) parts.push(`<span>${item.file_date}</span>`);
   document.getElementById('lbInfo').innerHTML = parts.join(' &nbsp;·&nbsp; ');
 
-  document.getElementById('lbDownload').dataset.url = `${API}${item.url}${item.url.includes('?') ? '&' : '?'}raw=1`;
+  const downloadUrl = new URL(getAssetUrl(item.url));
+  downloadUrl.searchParams.set('raw', '1');
+  document.getElementById('lbDownload').dataset.url = downloadUrl.href;
   document.getElementById('lbDownload').dataset.filename = item.filename || 'image';
 
   document.getElementById('lbMetaToggle').style.display = hasGenerationMetadata() ? '' : 'none';
@@ -3784,7 +3851,7 @@ let reportTargetIndex = null;
 function openReportModal(index) {
   reportTargetIndex = index;
   const item = currentItems[index];
-  document.getElementById('reportThumb').src = `${API}${item.thumb_url}`;
+  document.getElementById('reportThumb').src = getAssetUrl(item.thumb_url);
   document.getElementById('reportFilename').textContent = item.filename;
   document.getElementById('reportNote').value = '';
   document.getElementById('reportSubmitBtn').disabled = true;
@@ -3794,7 +3861,7 @@ function openReportModal(index) {
   document.getElementById('reportModalContent').innerHTML = `
     <div class="report-modal-body">
       <div class="report-img-preview">
-        <img class="report-img-thumb" id="reportThumb" src="${API}${item.thumb_url}" alt="">
+        <img class="report-img-thumb" id="reportThumb" src="${escapeHtml(getAssetUrl(item.thumb_url))}" alt="">
         <div class="report-img-name" id="reportFilename">${escapeHtml(item.filename)}</div>
       </div>
       <div>
@@ -3847,7 +3914,7 @@ async function submitReport() {
     reason,
     note,
     qq_sender: item.qq_sender || '',
-    thumb_url: item.thumb_url ? `${API}${item.thumb_url}` : ''
+    thumb_url: item.thumb_url ? getAssetUrl(item.thumb_url) : ''
   };
 
   if (submitBtn) {
