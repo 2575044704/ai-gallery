@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="gallery-version" content="2.5.0">
+<meta name="gallery-version" content="2.5.1">
 <title>原典AI 图鉴</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2078,6 +2078,92 @@ body.terms-route .terms-page { display: block; }
   }
 }
 
+/* ===== v2.5.1: grouped ComfyUI generation metadata ===== */
+.meta-tooltip { width: min(480px, calc(100vw - 24px)); }
+.lb-meta-panel { width: 440px; }
+.lightbox-content:has(.lb-meta-panel:not(.hidden)) .lightbox-img-side,
+.lightbox-content:has(.lb-meta-panel:not(.hidden)) .lightbox-img-side img { max-width: min(60vw, calc(95vw - 460px)); }
+.comfy-meta { font-family: var(--font); color: var(--text); font-size: 12px; line-height: 1.65; }
+.comfy-overview { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-bottom: 13px; }
+.comfy-brand { margin-right: auto; color: var(--ok); font-family: var(--mono); font-weight: 600; letter-spacing: .2px; }
+.comfy-badge { padding: 2px 7px; border: 1px solid var(--border); background: var(--paper); color: var(--ink-soft); border-radius: 3px; font-size: 10px; }
+.comfy-note, .comfy-empty { color: var(--text2); font-size: 11px; }
+.comfy-note { margin: 0 0 12px; padding: 8px 10px; background: var(--paper); border-left: 2px solid var(--border-strong); }
+.comfy-stage { border: 1px solid var(--border); border-radius: 5px; overflow: hidden; margin-bottom: 12px; background: var(--surface); }
+.comfy-stage > summary { cursor: pointer; padding: 10px 12px; background: var(--paper2); display: flex; align-items: center; gap: 8px; list-style: none; font-weight: 600; }
+.comfy-stage > summary::-webkit-details-marker, .comfy-raw > summary::-webkit-details-marker { display: none; }
+.comfy-stage > summary::before, .comfy-raw > summary::before { content: '›'; font: 18px var(--mono); color: var(--text2); transition: transform .15s; }
+.comfy-stage[open] > summary::before, .comfy-raw[open] > summary::before { transform: rotate(90deg); }
+.comfy-stage[open] > summary { border-bottom: 1px solid var(--border); }
+.comfy-stage.is-detail > summary { background: rgba(143,106,30,.07); }
+.comfy-stage.is-resample > summary { background: var(--accent-wash); }
+.comfy-stage-count { margin-left: auto; flex-shrink: 0; font: 10px var(--mono); color: var(--text2); font-weight: 400; }
+.comfy-stage-body { padding: 12px; }
+.comfy-stage-origin { color: var(--text2); font: 10px/1.6 var(--mono); overflow-wrap: anywhere; margin-bottom: 12px; }
+.comfy-section + .comfy-section { margin-top: 15px; padding-top: 12px; border-top: 1px solid var(--border); }
+.comfy-section-head { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.comfy-section-title { font-size: 11px; font-weight: 600; color: var(--ink-soft); }
+.comfy-section-index { width: 19px; height: 19px; display: inline-flex; align-items: center; justify-content: center; color: var(--text2); border: 1px solid var(--border); border-radius: 3px; font: 10px var(--mono); }
+.comfy-section.positive .comfy-section-title { color: var(--ok); }
+.comfy-section.negative .comfy-section-title { color: #9A534A; }
+.comfy-copy { margin-left: auto; padding: 1px 6px; cursor: pointer; color: var(--text2); border: 1px solid transparent; border-radius: 3px; background: transparent; font: 10px var(--font); }
+.comfy-copy:hover { border-color: var(--border-strong); color: var(--accent); }
+.comfy-copy:focus-visible, .comfy-stage > summary:focus-visible, .comfy-raw > summary:focus-visible, .comfy-expand:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.comfy-prompt { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; font-size: 12px; margin: 0; }
+.comfy-prompt-wrap + .comfy-prompt-wrap { margin-top: 8px; }
+.comfy-prompt-label { display: block; font-size: 10px; color: var(--text2); margin-bottom: 3px; }
+.comfy-prompt.is-collapsed { max-height: 108px; overflow: hidden; mask-image: linear-gradient(#000 70%, transparent); }
+.comfy-expand { margin: 5px 0 0; padding: 0; background: none; border: 0; color: var(--accent); cursor: pointer; font: 11px var(--font); }
+.comfy-resources { display: grid; gap: 6px; }
+.comfy-resource { padding: 8px 9px; border: 1px solid var(--border); border-radius: 3px; background: var(--paper); min-width: 0; }
+.comfy-resource-kind { display: block; color: var(--text2); font: 9px/1.6 var(--mono); letter-spacing: .3px; margin-bottom: 2px; }
+.comfy-resource-name { font: 11px/1.6 var(--mono); overflow-wrap: anywhere; }
+.comfy-resource-weights { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+.comfy-weight { color: #6B5B8A; background: rgba(107,91,138,.07); padding: 1px 5px; border-radius: 2px; font: 10px/1.6 var(--mono); }
+.comfy-params { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.comfy-param { background: var(--paper); border: 1px solid var(--border); border-radius: 3px; padding: 7px 9px; min-width: 0; }
+.comfy-param.is-wide { grid-column: 1 / -1; }
+.comfy-param dt { font-size: 10px; color: var(--text2); margin: 0 0 3px; }
+.comfy-param dd { margin: 0; font: 11px/1.5 var(--mono); overflow-wrap: anywhere; }
+.comfy-params dl { margin: 0; }
+.comfy-raw { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 8px; }
+.comfy-raw > summary { display: flex; align-items: center; gap: 7px; color: var(--text2); cursor: pointer; font-size: 11px; list-style: none; }
+.comfy-raw pre { max-height: 340px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 10px; border: 1px solid var(--border); background: var(--paper); font: 10px/1.6 var(--mono); }
+@media (max-width: 900px) {
+  .lightbox-content:has(.lb-meta-panel:not(.hidden)) .lightbox-img-side,
+  .lightbox-content:has(.lb-meta-panel:not(.hidden)) .lightbox-img-side img { max-width: 90vw; }
+  .lb-meta-panel { width: 90vw; max-height: 60vh; }
+  .lightbox.open { justify-content: flex-start; }
+  .lightbox-content { padding-top: 68px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .comfy-stage > summary::before, .comfy-raw > summary::before { transition: none; }
+}
+
+/* v2.5.2: 深度检测 */
+.inspect-deep-panel { margin: 18px 0; padding: 18px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--bg-secondary, #f7f4ef); }
+.inspect-deep-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.inspect-deep-panel p, .inspect-deep-report p, .inspect-tagger-report p { font-size: 13px; line-height: 1.7; margin: 12px 0; overflow-wrap: anywhere; }
+.inspect-deep-btn { background: var(--accent, #755441); color: #fff; padding: 10px 20px; border: 0; border-radius: 5px; cursor: pointer; font: inherit; font-size: 14px; }
+.inspect-deep-btn:hover { filter: brightness(1.12); }
+.inspect-deep-btn:disabled { opacity: .6; cursor: wait; }
+.inspect-deep-muted { color: var(--text-muted, #756e67); }
+.inspect-stage-status { margin-top: 14px; font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
+.inspect-stage-error { color: var(--seal, #a74a32); font-size: 13px; line-height: 1.7; }
+.inspect-deep-report, .inspect-tagger-report { margin: 24px 0; padding: 18px; border: 1px solid var(--border-strong); border-radius: 8px; min-width: 0; }
+.inspect-evidence-stats { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; font-size: 12px; }
+.inspect-evidence-stats span { background: var(--bg-secondary, #f2ede6); padding: 5px 9px; border-radius: 4px; }
+.inspect-evidence { border-top: 1px solid var(--border); margin-top: 10px; min-width: 0; }
+.inspect-evidence summary { cursor: pointer; padding: 12px 0; font-size: 13px; overflow-wrap: anywhere; }
+.inspect-evidence pre { margin: 0 0 12px; max-height: 440px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 12px/1.65 Consolas, monospace; background: var(--bg-secondary, #f7f4ef); padding: 12px; }
+.inspect-evidence > .inspect-evidence { margin-left: 12px; }
+.inspect-inference-badge { font-size: 11px; border: 1px solid var(--border-strong); padding: 4px 8px; border-radius: 4px; display: inline-block; color: var(--accent); }
+.inspect-tagger-report h4 { font-size: 13px; margin: 18px 0 10px; }
+.inspect-tag-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.inspect-tag { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 5px; max-width: 100%; overflow-wrap: anywhere; }
+.inspect-tag b { font-size: 11px; color: var(--accent); white-space: nowrap; }
+@media (max-width: 540px) { .inspect-deep-panel, .inspect-deep-report, .inspect-tagger-report { padding: 12px; } }
+
 </style>
 </head>
 <body>
@@ -2370,10 +2456,10 @@ body.terms-route .terms-page { display: block; }
     </div>
     <div class="inspect-modal-body" id="inspectModalBody">
       <div class="inspect-dropzone" id="inspectDropzone">
-        <input type="file" id="inspectFileInput" accept="image/png,image/jpeg,image/webp,image/avif,.png,.jpg,.jpeg,.webp,.avif" />
+        <input type="file" id="inspectFileInput" accept="image/png,image/jpeg,image/webp,image/avif,image/tiff,.png,.jpg,.jpeg,.webp,.avif,.tif,.tiff" />
         <div class="inspect-dropzone-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
         <div class="inspect-dropzone-text">拖拽图片到这里，或点击选择文件</div>
-        <div class="inspect-dropzone-hint">支持 PNG · JPEG · WebP · AVIF（最大 100MB）</div>
+        <div class="inspect-dropzone-hint">支持 PNG · JPEG · WebP · AVIF · TIFF（最大 100MB）</div>
       </div>
       <div id="inspectResultArea"></div>
     </div>
@@ -2534,18 +2620,441 @@ function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+/* ===== v2.5.1: ComfyUI graph-aware metadata, shared by cards and inspector ===== */
+function parseComfyJSON(value) {
+  if (typeof value !== 'string') return value;
+  const text = value.trim();
+  if (!/^[{[]/.test(text)) return null;
+  try {
+    // PNG prompt JSON may contain uint64 seeds. Preserve their exact decimal text.
+    return JSON.parse(text.replace(/"(?:\\.|[^"\\])*"|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g, token =>
+      /^-?\d+$/.test(token) && !Number.isSafeInteger(Number(token)) ? JSON.stringify(token) : token));
+  } catch { return null; }
+}
+
+function findComfyGraph(meta) {
+  const candidates = [], workflows = [], seen = new Set();
+  let budget = 160;
+  function inspect(value, depth = 0) {
+    if (!value || depth > 6 || --budget < 0) return;
+    const data = typeof value === 'string' ? parseComfyJSON(value) : value;
+    if (!data || typeof data !== 'object' || seen.has(data)) return;
+    seen.add(data);
+    if (Array.isArray(data.nodes)) workflows.push(data);
+    const nodes = Object.entries(data).filter(([, n]) => n && typeof n === 'object' &&
+      typeof n.class_type === 'string' && n.inputs && typeof n.inputs === 'object');
+    if (nodes.length) { candidates.push(nodes); return; }
+    if (Array.isArray(data)) {
+      for (const chunk of data) if (chunk && typeof chunk === 'object') inspect(chunk.text ?? chunk, depth + 1);
+    } else {
+      for (const key of ['prompt', 'png_metadata', 'params_dict', 'workflow', 'extra_pnginfo',
+        'metadata', 'generation_data', 'parameters', 'params', 'raw_metadata', 'exif', 'UserComment', 'Comment', 'user_comment']) {
+        if (data[key] != null) inspect(data[key], depth + 1);
+      }
+    }
+  }
+  inspect(meta);
+  if (!candidates.length && !workflows.length) return null;
+  // The executed API prompt takes precedence over the editor's optional / muted nodes.
+  const workflow = workflows[0];
+  if (candidates.length) {
+    const nodes = new Map(candidates[0].map(([id, n]) => [String(id), {
+      id: String(id), type: n.class_type, title: n._meta?.title || '', inputs: n.inputs, mode: 0,
+    }]));
+    return { nodes, source: 'prompt', missingWidgets: false };
+  }
+  const links = new Map((workflow.links || []).map(link => Array.isArray(link)
+    ? [String(link[0]), [String(link[1]), Number(link[2])]]
+    : [String(link.id), [String(link.origin_id), Number(link.origin_slot)]]));
+  const nodes = new Map();
+  let missingWidgets = false;
+  for (const n of workflow.nodes) {
+    if (n.id == null || typeof n.type !== 'string') continue;
+    const inputs = Object.create(null), slots = n.inputs || [];
+    const values = n.widgets_values;
+    if (values && !Array.isArray(values) && typeof values === 'object') Object.assign(inputs, values);
+    if (Array.isArray(values)) {
+      const schemas = {
+        CheckpointLoaderSimple: ['ckpt_name'], CheckpointLoader: ['config_name', 'ckpt_name'],
+        UNETLoader: ['unet_name', 'weight_dtype'], VAELoader: ['vae_name'],
+        CLIPLoader: ['clip_name', 'type', 'device'], DualCLIPLoader: ['clip_name1', 'clip_name2', 'type', 'device'],
+        TripleCLIPLoader: ['clip_name1', 'clip_name2', 'clip_name3'],
+        LoraLoader: ['lora_name', 'strength_model', 'strength_clip'],
+        LoraLoaderModelOnly: ['lora_name', 'strength_model'],
+        CLIPTextEncode: ['text'], CLIPTextEncodeSDXL: ['width', 'height', 'crop_w', 'crop_h', 'target_width', 'target_height', 'text_g', 'text_l'],
+        CLIPTextEncodeFlux: ['clip_l', 't5xxl', 'guidance'],
+        EmptyLatentImage: ['width', 'height', 'batch_size'], EmptySD3LatentImage: ['width', 'height', 'batch_size'],
+        LatentUpscaleBy: ['upscale_method', 'scale_by'], LatentUpscale: ['upscale_method', 'width', 'height', 'crop'],
+        ImageScaleBy: ['upscale_method', 'scale_by'], ImageScale: ['upscale_method', 'width', 'height', 'crop'],
+        UpscaleModelLoader: ['model_name'], KSamplerSelect: ['sampler_name'],
+        BasicScheduler: ['scheduler', 'steps', 'denoise'], CFGGuider: ['cfg'], FluxGuidance: ['guidance'],
+        UltralyticsDetectorProvider: ['model_name'], SAMLoader: ['model_name', 'device_mode'],
+        CLIPSetLastLayer: ['stop_at_clip_layer'], SaveImage: ['filename_prefix'],
+        PrimitiveNode: ['value'], 'PrimitiveString': ['value'], 'PrimitiveInt': ['value'], 'PrimitiveFloat': ['value'],
+      };
+      let schema = schemas[n.type];
+      // control_after_generate is a frontend-only widget and absent in some workflow versions.
+      const withControl = index => typeof values[index] === 'string' && /^(fixed|increment|decrement|randomize)$/.test(values[index]);
+      if (n.type === 'KSampler') schema = ['seed', ...(withControl(1) ? ['control_after_generate'] : []), 'steps', 'cfg', 'sampler_name', 'scheduler', 'denoise'];
+      if (n.type === 'KSamplerAdvanced') schema = ['add_noise', 'noise_seed', ...(withControl(2) ? ['control_after_generate'] : []), 'steps', 'cfg', 'sampler_name', 'scheduler', 'start_at_step', 'end_at_step', 'return_with_leftover_noise'];
+      if (n.type === 'RandomNoise') schema = ['noise_seed', ...(withControl(1) ? ['control_after_generate'] : [])];
+      if (n.type === 'FaceDetailer' || n.type === 'DetailerForEach' || n.type === 'DetailerForEachPipe') {
+        schema = ['guide_size', 'guide_size_for', 'max_size', 'seed', ...(withControl(4) ? ['control_after_generate'] : []),
+          'steps', 'cfg', 'sampler_name', 'scheduler', 'denoise', 'feather', 'noise_mask', 'force_inpaint',
+          ...(n.type === 'FaceDetailer' ? ['bbox_threshold', 'bbox_dilation', 'bbox_crop_factor', 'sam_detection_hint',
+            'sam_dilation', 'sam_threshold', 'sam_bbox_expansion', 'sam_mask_hint_threshold', 'sam_mask_hint_use_negative', 'drop_size'] : []),
+          'wildcard', ...(n.type === 'DetailerForEachPipe' ? ['refiner_ratio'] : []), 'cycle',
+          'inpaint_model', 'noise_mask_feather', 'tiled_encode', 'tiled_decode'];
+      }
+      if (schema) schema.forEach((key, i) => { if (values[i] !== undefined) inputs[key] = values[i]; });
+      else if (values.length) missingWidgets = true; // Unknown custom widget order is never guessed.
+    }
+    for (const slot of slots) if (slot.link != null && links.has(String(slot.link))) inputs[slot.name] = links.get(String(slot.link));
+    nodes.set(String(n.id), { id: String(n.id), type: n.type, title: n.title || '', inputs, mode: Number(n.mode) || 0, slots, outputs: n.outputs || [] });
+  }
+  return { nodes, source: 'workflow', missingWidgets };
+}
+
+function buildComfyView(meta) {
+  const graph = findComfyGraph(meta);
+  if (!graph) return null;
+  const { nodes } = graph;
+  const isLink = value => Array.isArray(value) && value.length === 2 &&
+    (typeof value[0] === 'number' || typeof value[0] === 'string') && Number.isInteger(value[1]) && nodes.has(String(value[0]));
+  const isDisabled = n => n.mode === 2;
+  function resolve(value, seen = new Set()) {
+    if (!isLink(value)) return null;
+    const node = nodes.get(String(value[0]));
+    const key = node.id + ':' + value[1];
+    if (seen.has(key) || isDisabled(node)) return null;
+    seen.add(key);
+    if (node.mode === 4) {
+      const type = node.outputs?.[value[1]]?.type;
+      const matches = (node.slots || []).filter(s => s.link != null && s.type === type && isLink(node.inputs[s.name]));
+      // Bypass only a uniquely compatible socket. Ambiguous routes remain in raw metadata.
+      return matches.length === 1 ? resolve(node.inputs[matches[0].name], seen) : null;
+    }
+    return { node, slot: value[1] };
+  }
+  function literal(value, seen = new Set()) {
+    if (value == null || typeof value === 'object' && !isLink(value)) return null;
+    if (!isLink(value)) return value;
+    const ref = resolve(value);
+    if (!ref || seen.has(ref.node.id)) return null;
+    seen.add(ref.node.id);
+    const n = ref.node;
+    if (!/primitive|string|text|integer|float|seed|reroute/i.test(n.type)) return null;
+    for (const key of ['value', 'text', 'string', 'seed', 'noise_seed', 'input']) {
+      if (n.inputs[key] !== undefined) return literal(n.inputs[key], seen);
+    }
+    return null;
+  }
+  const imageInput = key => /^(latent_image|latent|samples|image|images|pixels|upscaled_image|image1|image2|image_a|image_b|pipe|basic_pipe|detailer_pipe)$/.test(key);
+  function isDetail(n) {
+    return /^(FaceDetailer|DetailerForEach|MaskDetailer|SEGSDetailer)|(?:Hand|Face).*(?:Fix|Refin|Detail)/i.test(n.type) ||
+      /detailer/i.test(n.type) && ('steps' in n.inputs || 'denoise' in n.inputs) && !/ToDetailerPipe|DetailerPipeTo/i.test(n.type);
+  }
+  function isSampler(n) {
+    return !isDetail(n) && (/^(KSampler|SamplerCustom)(?!Select|Provider)/i.test(n.type) ||
+      /UltimateSDUpscale|IterativeLatentUpscale|IterativeImageUpscale/i.test(n.type) ||
+      /sampler/i.test(n.type) && ('steps' in n.inputs || 'guider' in n.inputs) && Object.keys(n.inputs).some(imageInput));
+  }
+  const isStage = n => isSampler(n) || isDetail(n);
+  function walk(values, { stopStages = false, skipImage = false } = {}) {
+    const result = [], seen = new Set(), stack = [...values].reverse();
+    while (stack.length) {
+      const ref = resolve(stack.pop());
+      if (!ref || seen.has(ref.node.id)) continue;
+      const n = ref.node;
+      seen.add(n.id);
+      if (stopStages && isStage(n)) continue;
+      result.push(n);
+      for (const [key, value] of Object.entries(n.inputs).reverse()) {
+        if (!skipImage || !imageInput(key) || /pipe/.test(key)) stack.push(value);
+      }
+    }
+    return result;
+  }
+  const available = [...nodes.values()].filter(n => !isDisabled(n) && n.mode !== 4);
+  const saves = available.filter(n => /^(SaveImage|SaveAnimated|ImageSave)|save.*image|image.*save/i.test(n.type));
+  const previews = available.filter(n => /^PreviewImage$/i.test(n.type));
+  let roots = saves.length ? saves : previews;
+  const outputId = meta.unique_id ?? meta.output_node_id;
+  if (outputId != null && roots.some(n => n.id === String(outputId))) roots = roots.filter(n => n.id === String(outputId));
+  const active = roots.length ? walk(roots.map(n => [n.id, 0])) : available;
+  const stageNodes = active.filter(isStage);
+  const stageIds = new Set(stageNodes.map(n => n.id));
+  const parents = new Map();
+  for (const n of stageNodes) {
+    const found = new Set(), seen = new Set();
+    const stack = Object.entries(n.inputs).filter(([key]) => imageInput(key)).map(([, value]) => value);
+    while (stack.length) {
+      const ref = resolve(stack.pop());
+      if (!ref || seen.has(ref.node.id)) continue;
+      const upstream = ref.node;
+      seen.add(upstream.id);
+      if (stageIds.has(upstream.id)) { found.add(upstream.id); continue; }
+      for (const [key, value] of Object.entries(upstream.inputs)) {
+        if (!/^(model|clip|vae|positive|negative|conditioning|guider|noise|sampler|sigmas|bbox_detector|segm_detector_opt|sam_model_opt)$/.test(key)) stack.push(value);
+      }
+    }
+    parents.set(n.id, found);
+  }
+  const ordered = [], done = new Set(), visiting = new Set();
+  function sort(n) {
+    if (done.has(n.id) || visiting.has(n.id)) return;
+    visiting.add(n.id);
+    for (const id of parents.get(n.id) || []) if (nodes.has(id)) sort(nodes.get(id));
+    visiting.delete(n.id); done.add(n.id); ordered.push(n);
+  }
+  stageNodes.forEach(sort);
+
+  function promptTexts(value, polarity, seen = new Set()) {
+    const direct = literal(value);
+    if (typeof direct === 'string' && direct.trim()) return [{ text: direct, label: '' }];
+    const ref = resolve(value);
+    if (!ref || seen.has(ref.node.id + ':' + ref.slot + ':' + polarity)) return [];
+    const n = ref.node, ins = n.inputs;
+    seen.add(n.id + ':' + ref.slot + ':' + polarity);
+    if (/ConditioningZeroOut/i.test(n.type)) return [{ text: '空条件（ConditioningZeroOut）', label: '' }];
+    const entries = [];
+    const textKeys = ['text', 'text_g', 'text_l', 'clip_l', 't5xxl', 'text_t5', 'prompt', 'string'];
+    // These are text/conditioning sockets, never checkpoint paths, titles or the opposite prompt.
+    for (const key of textKeys) {
+      if (ins[key] == null) continue;
+      const text = literal(ins[key]);
+      if (typeof text === 'string' && text.trim()) entries.push({ text, label: textKeys.length && key !== 'text' && key !== 'prompt' ? key : '' });
+      else if (isLink(ins[key])) entries.push(...promptTexts(ins[key], polarity, new Set(seen)));
+    }
+    if (entries.length) return entries;
+    const portPolarity = /^(ControlNetApplyAdvanced|InpaintModelConditioning)$/.test(n.type) && ref.slot <= 1
+      ? (ref.slot === 0 ? 'positive' : 'negative') : polarity;
+    if (ins[portPolarity] != null) return promptTexts(ins[portPolarity], portPolarity, seen);
+    for (const [key, input] of Object.entries(ins)) {
+      if (/^conditioning(?:_\d+)?$|^conditionings?$|^conditioning_(?:to|from)$|^cond[12]$|^guider$|(?:^|_)pipe(?:_opt)?$|^input$/.test(key)) {
+        if (key === 'conditioning' && polarity === 'negative' && /BasicGuider/i.test(n.type)) continue;
+        entries.push(...promptTexts(input, polarity, new Set(seen)));
+      }
+    }
+    return entries;
+  }
+  const uniq = (items, key) => [...new Map(items.map(item => [key(item), item])).values()];
+  function stagePrompts(n, polarity) {
+    const refs = n.inputs[polarity] != null ? [n.inputs[polarity]] :
+      Object.entries(n.inputs).filter(([key]) => /^(guider|pipe|basic_pipe|detailer_pipe)$/.test(key)).map(([, value]) => value);
+    return uniq(refs.flatMap(value => promptTexts(value, polarity)), p => p.label + '\n' + p.text);
+  }
+  const modelKeys = {
+    ckpt_name: 'Checkpoint', checkpoint: 'Checkpoint', checkpoint_name: 'Checkpoint',
+    unet_name: 'Diffusion / UNet', diffusion_model: 'Diffusion / UNet',
+    vae_name: 'VAE', clip_name: 'CLIP', clip_name1: 'CLIP 1', clip_name2: 'CLIP 2', clip_name3: 'CLIP 3',
+    control_net_name: 'ControlNet',
+  };
+  const validName = value => typeof value === 'string' && value.trim() && !/^(none|null|undefined|disabled|off)$/i.test(value.trim());
+  function resources(list) {
+    const models = [], loras = [];
+    function addLora(n, name, model, clip, enabled = true) {
+      if (!enabled || !validName(name)) return;
+      if (model != null && Number(model) === 0 && (clip == null || Number(clip) === 0)) return;
+      loras.push({ name, model, clip, node: n.id });
+    }
+    for (const n of list) {
+      const ins = n.inputs;
+      for (const [key, kind] of Object.entries(modelKeys)) {
+        const name = literal(ins[key]);
+        if (validName(name)) models.push({ kind, name });
+      }
+      if (/UNETLoader|Diffusion.*Loader|Checkpoint.*Loader|VAELoader|CLIPLoader|UpscaleModelLoader/i.test(n.type)) {
+        const name = literal(ins.model_name);
+        if (validName(name)) models.push({ kind: /Upscale/i.test(n.type) ? '放大模型' : n.type, name });
+      }
+      // Efficient loaders may embed LoRA settings instead of using a separate LoRA node.
+      if (!/lora/i.test(n.type) && !Object.keys(ins).some(key => /^lora_name/.test(key))) continue;
+      if ([ins.on, ins.enabled].some(v => v === false || v === 0 || v === 'false' || v === 'off')) continue;
+      for (const [key, value] of Object.entries(ins)) {
+        if (/^lora_name(?:_?\d+)?$|^lora_\d+$|^lora$/i.test(key)) {
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            const enabled = value.on !== false && value.enabled !== false && value.on !== 0;
+            addLora(n, value.lora ?? value.lora_name ?? value.name, value.strength ?? value.strength_model,
+              value.strengthTwo ?? value.strength_clip ?? value.strength, enabled);
+          } else {
+            const suffix = key.match(/(_?\d+)$/)?.[1] || '';
+            const model = literal(ins['strength_model' + suffix] ?? ins['lora_model_strength' + suffix] ?? ins['model_weight' + suffix] ?? ins['lora_strength' + suffix] ?? ins['strength' + suffix]);
+            const clip = literal(ins['strength_clip' + suffix] ?? ins['lora_clip_strength' + suffix] ?? ins['clip_weight' + suffix] ?? ins['clip_strength' + suffix]);
+            const toggle = ins['switch' + suffix] ?? ins['enabled' + suffix];
+            addLora(n, literal(value), model, clip, toggle !== false && toggle !== 'Off' && toggle !== 0);
+          }
+        }
+      }
+    }
+    return { models: uniq(models, m => m.kind + ':' + m.name), loras: uniq(loras, l => JSON.stringify(l)) };
+  }
+  const labels = {
+    seed: '种子 Seed', noise_seed: '种子 Seed', steps: '步数 Steps', cfg: 'CFG', sampler_name: '采样器', scheduler: '调度器',
+    denoise: '重绘强度 Denoise', guidance: 'Guidance', add_noise: '添加噪声', start_at_step: '开始步数', end_at_step: '结束步数',
+    return_with_leftover_noise: '保留剩余噪声', width: '宽度', height: '高度', batch_size: '批量',
+    upscale_by: '放大倍率', scale_by: '放大倍率', upscale_method: '缩放方法',
+    guide_size: '细化尺寸', guide_size_for: '尺寸参照 BBox', max_size: '最大尺寸',
+    bbox_threshold: 'BBox 阈值', bbox_dilation: 'BBox 扩张', bbox_crop_factor: 'BBox 裁剪倍率',
+    threshold: '检测阈值', dilation: '检测扩张', crop_factor: '裁剪倍率',
+    sam_detection_hint: 'SAM 检测提示', sam_dilation: 'SAM 扩张', sam_threshold: 'SAM 阈值', sam_bbox_expansion: 'SAM 框扩张',
+    sam_mask_hint_threshold: 'SAM 遮罩阈值', sam_mask_hint_use_negative: 'SAM 负向遮罩', drop_size: '最小检测尺寸',
+    feather: '羽化', noise_mask: '噪声遮罩', force_inpaint: '强制重绘', cycle: '循环次数',
+    noise_mask_feather: '噪声遮罩羽化', inpaint_model: 'Inpaint 模式',
+    tile_width: '分块宽度', tile_height: '分块高度', tile_padding: '分块补边', mask_blur: '遮罩模糊',
+    tiled_encode: '分块编码', tiled_decode: '分块解码', stop_at_clip_layer: 'CLIP 截止层',
+    refiner_ratio: 'Refiner 比例', wildcard: '局部附加提示词',
+  };
+  const detectionKeys = new Set(['guide_size', 'guide_size_for', 'max_size', 'threshold', 'dilation', 'crop_factor', 'drop_size',
+    'feather', 'noise_mask', 'force_inpaint', 'cycle', 'noise_mask_feather', 'inpaint_model', 'wildcard']);
+  function parameterRows(list, local) {
+    const rows = [], used = new Set();
+    for (const n of list) for (const [key, label] of Object.entries(labels)) {
+      const isLocal = detectionKeys.has(key) || /^(bbox_|sam_)/.test(key);
+      if (isLocal !== local || used.has(label)) continue;
+      // SDXL text encoders also carry width/height for conditioning; they are not the latent size.
+      if (/^(width|height|batch_size)$/.test(key) && /CLIPTextEncode|Conditioning/i.test(n.type)) continue;
+      const value = literal(n.inputs[key]);
+      if (value == null || value === '') continue;
+      rows.push({ key, label, value: String(value) }); used.add(label);
+    }
+    return rows.sort((a, b) => Object.keys(labels).indexOf(a.key) - Object.keys(labels).indexOf(b.key));
+  }
+  const samplingDepth = new Map();
+  let independent = 0, detailCount = 0;
+  const stages = ordered.map(n => {
+    // Stop at previous samplers: each pass keeps its own model/LoRA/prompts/settings.
+    const config = [n, ...walk(Object.entries(n.inputs).filter(([key]) => !imageInput(key) || /pipe/.test(key)).map(([, v]) => v), { stopStages: true, skipImage: true })];
+    const imageChain = walk(Object.entries(n.inputs).filter(([key]) => imageInput(key)).map(([, v]) => v), { stopStages: true });
+    const detectors = uniq([...config, ...imageChain].filter(node => /detector|bbox|samloader|segm|segs.*(?:filter|label)/i.test(node.type)), node => node.id);
+    const detail = isDetail(n) || detectors.length > 0 && imageChain.some(node => /VAEEncodeForInpaint|SetLatentNoiseMask|InpaintModelConditioning/i.test(node.type));
+    const previousDepth = Math.max(0, ...[...(parents.get(n.id) || [])].map(id => samplingDepth.get(id) || 0));
+    const depth = previousDepth + (detail ? 0 : 1);
+    samplingDepth.set(n.id, depth);
+    const detectorNames = uniq(detectors.flatMap(node => Object.entries(node.inputs).filter(([key]) =>
+      /^(model_name|bbox_model_name|sam_model_name|detector_name|labels|label|label_filter)$/.test(key)).map(([, v]) => literal(v)).filter(validName)), x => x);
+    // FaceDetailer also handles hands: identify the target from its detector, not its class name.
+    const targetHint = detectorNames.join(' ') + ' ' + n.title;
+    const target = /hand|手部|手指/i.test(targetHint) ? '手部优化' : /face|脸|面部/i.test(targetHint) ? '面部优化' : '局部重绘';
+    let title;
+    if (detail) { detailCount++; title = target + (detectors.some(d => /bbox|ultralytics/i.test(d.type)) ? ' · BBox' : ''); }
+    else if (depth > 1) title = (depth === 2 ? '二采' : `第 ${depth} 次采样`) + (imageChain.some(node => /upscale|imagescale/i.test(node.type)) || /upscale/i.test(n.type) ? ' · 放大重绘' : ' · 再采样');
+    else { independent++; title = independent === 1 ? '一采 · 基础生成' : `独立采样分支 ${independent}`; }
+    const resource = resources(config);
+    const extras = resources(imageChain.filter(node => /UpscaleModelLoader/i.test(node.type))).models;
+    resource.models.push(...extras);
+    return {
+      id: n.id, type: n.type, nodeTitle: n.title, title, detail, depth,
+      positive: stagePrompts(n, 'positive'), negative: stagePrompts(n, 'negative'),
+      ...resource, params: parameterRows([...config.filter(node => !detectors.includes(node)), ...imageChain], false),
+      detectorNames, localParams: parameterRows([n, ...detectors], true),
+    };
+  });
+  // VAEs often connect after the sampler, at VAEDecode, rather than to its inputs.
+  // Attach each decoder's VAE to the stage that actually supplies its samples.
+  for (const decoder of active.filter(n => /^VAEDecode/.test(n.type))) {
+    const stack = [decoder.inputs.samples], seen = new Set(), owners = new Set();
+    while (stack.length) {
+      const ref = resolve(stack.pop());
+      if (!ref || seen.has(ref.node.id)) continue;
+      const n = ref.node;
+      seen.add(n.id);
+      if (stageIds.has(n.id)) { owners.add(n.id); continue; }
+      for (const [key, value] of Object.entries(n.inputs)) if (imageInput(key)) stack.push(value);
+    }
+    const vaeModels = resources(walk([decoder.inputs.vae], { stopStages: true, skipImage: true })).models;
+    for (const stage of stages) if (owners.has(stage.id)) {
+      const additions = vaeModels.filter(model => !stage.models.some(existing => existing.name === model.name && existing.kind === model.kind))
+        .map(model => ({ ...model, kind: model.kind === 'Checkpoint' ? 'VAE（Checkpoint 内置）' : model.kind }));
+      stage.models = uniq([...stage.models, ...additions], m => m.kind + ':' + m.name);
+    }
+  }
+  const notes = [];
+  if (graph.source === 'workflow') notes.push('仅含编辑器工作流，按可识别的连线与参数整理。');
+  if (graph.missingWidgets) notes.push('部分自定义节点未记录字段名，其参数保留在原始工作流中。');
+  if (roots.length > 1) notes.push('包含多个图像输出，以下分别保留各条生成分支。');
+  if (!roots.length) notes.push('未记录图像输出节点，以下列出已记录的采样阶段。');
+  if (!stages.length) notes.push('未识别到采样阶段，可展开原始工作流查看节点。');
+  return { stages, notes, detailCount, maxDepth: Math.max(0, ...samplingDepth.values()), nodeCount: active.length };
+}
+
+function comfyEscape(value) { return escapeHtml(String(value ?? '')); }
+function comfyPromptHTML(items) {
+  if (!items.length) return '<div class="comfy-empty">未记录文本提示词</div>';
+  return items.map(item => {
+    const long = item.text.length > 320 || item.text.split('\n').length > 5;
+    return `<div class="comfy-prompt-wrap">${item.label ? `<span class="comfy-prompt-label">${comfyEscape(item.label)}</span>` : ''}<div class="comfy-prompt${long ? ' is-collapsed' : ''}">${comfyEscape(item.text)}</div>${long ? '<button type="button" class="comfy-expand" aria-expanded="false" onclick="toggleComfyPrompt(this)">展开全部</button>' : ''}</div>`;
+  }).join('');
+}
+function toggleComfyPrompt(button) {
+  const collapsed = button.previousElementSibling.classList.toggle('is-collapsed');
+  button.setAttribute('aria-expanded', String(!collapsed));
+  button.textContent = collapsed ? '展开全部' : '收起';
+}
+function copyComfySection(button) {
+  const section = button.closest('.comfy-section');
+  const prompts = [...section.querySelectorAll('.comfy-prompt')];
+  const text = prompts.length ? prompts.map(el => el.textContent).join('\n\n') : section.querySelector('.comfy-section-content').innerText;
+  if (!navigator.clipboard) { button.textContent = '请手动选择复制'; return; }
+  navigator.clipboard.writeText(text).then(() => {
+    button.textContent = '已复制';
+    setTimeout(() => { button.textContent = '复制'; }, 1500);
+  }).catch(() => { button.textContent = '复制失败'; });
+}
+function comfySection(number, title, content, tone = '', copy = false) {
+  return `<section class="comfy-section ${tone}"><div class="comfy-section-head"><span class="comfy-section-index">${number}</span><span class="comfy-section-title">${title}</span>${copy ? '<button type="button" class="comfy-copy" onclick="copyComfySection(this)">复制</button>' : ''}</div><div class="comfy-section-content">${content}</div></section>`;
+}
+function comfyResourcesHTML(items, lora = false) {
+  if (!items.length) return `<div class="comfy-empty">${lora ? '未提取到启用的 LoRA' : '未记录模型名称'}</div>`;
+  return `<div class="comfy-resources">${items.map(item => `<div class="comfy-resource"><span class="comfy-resource-kind">${comfyEscape(lora ? 'LoRA' : item.kind)}</span><div class="comfy-resource-name">${comfyEscape(item.name)}</div>${lora && (item.model != null || item.clip != null) ? `<div class="comfy-resource-weights">${item.model != null ? `<span class="comfy-weight">Model ${comfyEscape(item.model)}</span>` : ''}${item.clip != null ? `<span class="comfy-weight">CLIP ${comfyEscape(item.clip)}</span>` : ''}</div>` : ''}</div>`).join('')}</div>`;
+}
+function comfyParamsHTML(rows) {
+  if (!rows.length) return '<div class="comfy-empty">未记录采样参数</div>';
+  return `<div class="comfy-params">${rows.map(row => `<dl class="comfy-param${/seed|wildcard/.test(row.key) || row.value.length > 22 ? ' is-wide' : ''}"><dt>${comfyEscape(row.label)}</dt><dd>${comfyEscape(row.value)}</dd></dl>`).join('')}</div>`;
+}
+function renderComfyView(view, raw) {
+  const count = view.stages.length;
+  let html = `<div class="comfy-meta"><div class="comfy-overview"><span class="comfy-brand">ComfyUI</span><span class="comfy-badge">${count} 个生成阶段</span>${view.maxDepth > 1 ? `<span class="comfy-badge">${view.maxDepth} 次采样</span>` : ''}${view.detailCount ? `<span class="comfy-badge">${view.detailCount} 处局部优化</span>` : ''}</div>`;
+  html += view.notes.map(note => `<p class="comfy-note">${comfyEscape(note)}</p>`).join('');
+  for (const stage of view.stages) {
+    html += `<details class="comfy-stage${stage.detail ? ' is-detail' : stage.depth > 1 ? ' is-resample' : ''}" open><summary><span>${comfyEscape(stage.title)}</span><span class="comfy-stage-count">#${comfyEscape(stage.id)}</span></summary><div class="comfy-stage-body"><div class="comfy-stage-origin">${comfyEscape(stage.type)}${stage.nodeTitle && stage.nodeTitle !== stage.type ? ' · ' + comfyEscape(stage.nodeTitle) : ''}</div>`;
+    html += comfySection('1', '正向提示词', comfyPromptHTML(stage.positive), 'positive', stage.positive.length > 0);
+    html += comfySection('2', '使用的模型', comfyResourcesHTML(stage.models), '', stage.models.length > 0);
+    html += comfySection('3', 'LoRA', comfyResourcesHTML(stage.loras, true), '', stage.loras.length > 0);
+    html += comfySection('4', '负向提示词', comfyPromptHTML(stage.negative), 'negative', stage.negative.length > 0);
+    html += comfySection('5', '采样参数', comfyParamsHTML(stage.params));
+    if (stage.detail) {
+      const detectors = stage.detectorNames.map(name => ({ name, kind: '检测 / 分割模型' }));
+      html += comfySection('6', '检测与局部重绘', (detectors.length ? comfyResourcesHTML(detectors) + '<div style="height:8px"></div>' : '') + comfyParamsHTML(stage.localParams));
+    }
+    html += '</div></details>';
+  }
+  return html + `<details class="comfy-raw"><summary>原始工作流 / 元数据</summary><pre>${comfyEscape(raw)}</pre></details></div>`;
+}
+
+
 function renderMetaContent(container, meta, allowCollapse) {
   currentFullMetaText = '';
+  container.dataset.fullMetaText = '';
   let pm = meta.png_metadata;
   if (!pm || Object.keys(pm).length === 0) {
     pm = {};
-    for (const key of ['parameters', 'prompt', 'negative_prompt', 'workflow', 'generation_data', 'metadata', 'exif']) {
+    for (const key of ['parameters', 'prompt', 'negative_prompt', 'workflow', 'generation_data', 'metadata', 'exif', 'params_dict', 'raw_metadata']) {
       const value = meta[key];
       if (value != null && value !== '' &&
           (typeof value !== 'object' || Object.keys(value).length > 0)) {
         pm[key] = value;
       }
     }
+  }
+  let comfyView = null;
+  try { comfyView = buildComfyView(meta); } catch (error) { console.warn('ComfyUI 元数据分类失败，保留原始数据。', error); }
+  if (comfyView) {
+    const raw = JSON.stringify(Object.keys(pm).length ? pm : meta, null, 2);
+    container.innerHTML = renderComfyView(comfyView, raw);
+    container.dataset.fullMetaText = raw;
+    currentFullMetaText = raw;
+    return;
   }
   if (Object.keys(pm).length === 0) {
     container.innerHTML = '<div class="meta-loading" style="color:var(--text2)">未找到可显示的生成元数据</div>';
@@ -2583,6 +3092,7 @@ function renderMetaContent(container, meta, allowCollapse) {
   }
   container.innerHTML = html;
   currentFullMetaText = allParts.join('\n\n');
+  container.dataset.fullMetaText = currentFullMetaText;
 }
 
 function tryParseJSON(str) {
@@ -2603,7 +3113,7 @@ function showMetaTooltip(cardEl, item) {
   // NSFW 图片：不展示侧写 / 元数据
   if (item.safety === 'nsfw') {
     const rect = cardEl.getBoundingClientRect();
-    const tw = 440;
+    const tw = Math.min(480, window.innerWidth - 24);
     let left = rect.right + 12;
     let top = rect.top;
     if (left + tw > window.innerWidth - 16) left = rect.left - tw - 12;
@@ -2621,7 +3131,7 @@ function showMetaTooltip(cardEl, item) {
   const cacheKey = `${currentCollection}/${encodeURIComponent(item.filename)}`;
 
   const rect = cardEl.getBoundingClientRect();
-  const tw = 440;
+  const tw = Math.min(480, window.innerWidth - 24);
   let left = rect.right + 12;
   let top = rect.top;
   if (left + tw > window.innerWidth - 16) {
@@ -2720,6 +3230,10 @@ function loadLbMeta() {
   const item = currentItems[lightboxIndex];
   if (!item) return;
   const body = document.getElementById('lbMetaBody');
+  const requestCollection = currentCollection;
+  const requestItem = item;
+  const isCurrentMetadata = () => requestCollection === currentCollection && currentItems[lightboxIndex] === requestItem;
+  body.dataset.fullMetaText = '';
 
   // NSFW 图片：不展示提示词，显示违规提示
   if (item.safety === 'nsfw') {
@@ -2737,17 +3251,19 @@ function loadLbMeta() {
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(data => {
         metaCache[cacheKey] = data;
-        renderMetaContent(body, data, false);
+        if (isCurrentMetadata()) renderMetaContent(body, data, false);
       })
       .catch(error => {
+        if (!isCurrentMetadata()) return;
         body.innerHTML = `<div class="meta-loading" style="color:var(--text2)">元数据加载失败（${escapeHtml(error.message || '网络异常')}）</div>`;
       });
   }
 }
 
 function copyAllMeta() {
-  if (!currentFullMetaText) return;
-  navigator.clipboard.writeText(currentFullMetaText).then(() => {
+  const text = document.getElementById('lbMetaBody').dataset.fullMetaText || '';
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
     const btn = document.querySelector('.lb-meta-copy-btn');
     const orig = btn.textContent;
     btn.textContent = '已复制 ✓';
@@ -2927,53 +3443,234 @@ fileInput.addEventListener('change', e => {
   }
 });
 
-function handleInspectFile(file) {
-  const resultArea = document.getElementById('inspectResultArea');
-  const maxSize = 100 * 1024 * 1024;
+/* v2.5.2: 按需深度检测；文件证据与图像推测分开呈现。 */
+let inspectCurrentFile = null;
+let inspectPreviewUrl = '';
+let inspectSession = 0;
+let inspectController = null;
+let inspectDeepBusy = false;
+let inspectStages = {};
 
-  if (file.size > maxSize) {
-    resultArea.innerHTML = '<div class="inspect-error">文件过大，最大支持 100MB</div>';
-    return;
-  }
-
-  const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/avif'];
-  const ext = file.name.split('.').pop().toLowerCase();
-  const validExts = ['png', 'jpg', 'jpeg', 'webp', 'avif'];
-  if (!validTypes.includes(file.type) && !validExts.includes(ext)) {
-    resultArea.innerHTML = '<div class="inspect-error">不支持的文件格式，请上传 PNG/JPEG/WebP/AVIF 图片</div>';
-    return;
-  }
-
-  // Show loading
-  resultArea.innerHTML = `
-    <div class="inspect-loading">
-      <div class="spinner"></div>
-      <div class="inspect-loading-text">正在解析图片元数据...</div>
-    </div>`;
-
-  // Create preview URL
-  const previewUrl = URL.createObjectURL(file);
-
-  // Upload to API
-  const formData = new FormData();
-  formData.append('file', file);
-
-  fetch(`${API}/api/inspect`, {
-    method: 'POST',
-    body: formData,
-  })
-    .then(r => {
-      if (!r.ok) return r.json().then(d => { throw new Error(d.detail || r.status); });
-      return r.json();
-    })
-    .then(data => {
-      inspectCurrentData = data;
-      renderInspectResult(resultArea, data, file, previewUrl);
-    })
-    .catch(err => {
-      resultArea.innerHTML = `<div class="inspect-error">解析失败：${escapeHtml(err.message)}</div>`;
-    });
+function resetInspectSession() {
+  inspectSession++;
+  if (inspectController) inspectController.abort();
+  if (inspectPreviewUrl) URL.revokeObjectURL(inspectPreviewUrl);
+  inspectController = new AbortController();
+  inspectPreviewUrl = '';
+  inspectCurrentFile = null;
+  inspectCurrentData = null;
+  inspectDeepBusy = false;
+  inspectStages = {};
 }
+
+async function inspectRequest(endpoint, file, signal, timeoutMs = 240000) {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  signal.addEventListener('abort', abort, { once: true });
+  let timedOut = false;
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
+  try {
+    if (signal.aborted) controller.abort();
+    const form = new FormData();
+    form.append('file', file);
+    const response = await fetch(API + '/api/inspect' + endpoint, { method: 'POST', body: form, signal: controller.signal });
+    let data;
+    try { data = await response.json(); }
+    catch { throw new Error('服务器未返回有效结果（HTTP ' + response.status + '）'); }
+    if (!response.ok) {
+      if (response.status === 404) throw new Error('后端尚未升级到 v2.5.2，请部署配套后端后重试。');
+      throw new Error(typeof data.detail === 'string' ? data.detail : '请求失败（HTTP ' + response.status + '）');
+    }
+    return data;
+  } catch (error) {
+    if (timedOut) throw new Error('分析请求超时，请稍后重试。');
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    signal.removeEventListener('abort', abort);
+  }
+}
+
+async function handleInspectFile(file) {
+  resetInspectSession();
+  const area = document.getElementById('inspectResultArea');
+  if (file.size > 100 * 1024 * 1024) {
+    area.innerHTML = '<div class="inspect-error">文件过大，最大支持 100MB</div>';
+    return;
+  }
+  const extension = file.name.split('.').pop().toLowerCase();
+  if (!['png', 'jpg', 'jpeg', 'webp', 'avif', 'tif', 'tiff'].includes(extension) &&
+      !['image/png', 'image/jpeg', 'image/webp', 'image/avif', 'image/tiff'].includes(file.type)) {
+    area.innerHTML = '<div class="inspect-error">请上传 PNG / JPEG / WebP / AVIF / TIFF 图片</div>';
+    return;
+  }
+  inspectCurrentFile = file;
+  inspectPreviewUrl = URL.createObjectURL(file);
+  const session = inspectSession;
+  area.innerHTML = '<div class="inspect-loading"><div class="spinner"></div><div class="inspect-loading-text">正在解析图片元数据...</div></div>';
+  try {
+    const data = await inspectRequest('', file, inspectController.signal);
+    if (session !== inspectSession) return;
+    inspectCurrentData = data;
+    renderInspectResult(area, data, file, inspectPreviewUrl);
+  } catch (error) {
+    if (session !== inspectSession || error.name === 'AbortError') return;
+    inspectCurrentData = { filename: file.name, filesize: file.size, image_type: extension,
+      metadata_source: 'unknown', prompt: '', negative_prompt: '', params_dict: {},
+      deep_detection_available: true, generation_assessment: { reason: '常规读取失败，可尝试深度检测。' } };
+    inspectStages.basic = { status: 'error', message: error.message };
+    renderInspectResult(area, inspectCurrentData, file, inspectPreviewUrl);
+  }
+}
+
+function hasInspectGenerationData(data, view) {
+  if (typeof data.has_useful_generation_data === 'boolean') return data.has_useful_generation_data;
+  if ((data.prompt || '').trim() || (data.negative_prompt || '').trim()) return true;
+  if (view && view.stages.some(s => s.positive.length || s.negative.length || s.params.length || s.models.length)) return true;
+  return Object.entries(data.params_dict || {}).some(([key, value]) =>
+    /^(seed|steps|sampler|sampler_name|cfg scale|cfg_scale|cfg|model|model hash)$/i.test(key) &&
+    value != null && typeof value !== 'object' && String(value).trim());
+}
+
+function renderDeepPanel(data, view) {
+  if (hasInspectGenerationData(data, view) && !data.deep_analysis && !data.image_element_analysis && !Object.keys(inspectStages).length) return '';
+  const reason = data.generation_assessment?.reason || '尚未读到可用的生成提示词或采样参数；工作流和软件名称不代表原始生成信息。';
+  let result = '<section class="inspect-deep-panel"><div class="inspect-deep-heading"><strong>继续查找图片中的数据</strong>' +
+    '<button type="button" class="inspect-deep-btn" onclick="startDeepInspect()"' + (inspectDeepBusy ? ' disabled' : '') + '>' +
+    (inspectDeepBusy ? '深度检测中…' : data.deep_analysis ? '重新深度检测' : '深度检测') + '</button></div>' +
+    '<p>' + comfyEscape(reason) + '</p><p class="inspect-deep-muted">检查深层文件数据与像素隐写，同时运行 WD Tagger 分析可见元素。已被删除的原始信息无法凭空恢复。</p>';
+  if (Object.keys(inspectStages).length) {
+    result += '<div class="inspect-stage-status" role="status" aria-live="polite">';
+    for (const [key, stage] of Object.entries(inspectStages)) {
+      const label = { basic: '常规读取', deep: '深层文件数据', tagger: '图像元素近似分析结果' }[key];
+      result += '<div class="inspect-stage-' + (stage.status === 'error' ? 'error' : 'normal') + '">' +
+        comfyEscape(label + '：' + stage.message) + '</div>';
+    }
+    result += '</div>';
+  }
+  return result + '</section>';
+}
+
+async function startDeepInspect() {
+  if (!inspectCurrentFile || inspectDeepBusy) return;
+  const session = inspectSession, file = inspectCurrentFile, signal = inspectController.signal;
+  inspectDeepBusy = true;
+  inspectStages = { deep: { status: 'running', message: '正在检查文件结构、编码与像素隐写…' },
+    tagger: { status: 'running', message: '正在分析可见画面，首次加载模型可能较慢…' } };
+  const refresh = () => {
+    if (session === inspectSession) renderInspectResult(document.getElementById('inspectResultArea'), inspectCurrentData, file, inspectPreviewUrl);
+  };
+  refresh();
+  async function run(kind, endpoint) {
+    try {
+      const result = await inspectRequest(endpoint, file, signal);
+      if (session !== inspectSession) return;
+      if (kind === 'deep') {
+        if (!result.deep_analysis) throw new Error('后端返回了常规结果，请确认已部署 v2.5.2。');
+        const tagger = inspectCurrentData.image_element_analysis;
+        inspectCurrentData = result;
+        if (tagger) inspectCurrentData.image_element_analysis = tagger;
+        inspectStages.deep = { status: 'completed', message: result.deep_analysis.status === 'completed_with_warnings' ? '已完成，部分检查有提示，详见覆盖范围。' : '已完成。' };
+      } else {
+        inspectCurrentData.image_element_analysis = result;
+        inspectStages.tagger = { status: 'completed', message: '已完成，近似标签在下方单独展示。' };
+      }
+    } catch (error) {
+      if (session !== inspectSession || error.name === 'AbortError') return;
+      inspectStages[kind] = { status: 'error', message: error.message };
+      if (kind === 'tagger') inspectCurrentData.image_element_analysis = {
+        title: '图像元素近似分析结果', status: 'error', error: error.message, evidence_type: 'model_inference' };
+    } finally {
+      refresh();
+    }
+  }
+  await Promise.allSettled([run('deep', '/deep'), run('tagger', '/tagger')]);
+  if (session === inspectSession) { inspectDeepBusy = false; refresh(); }
+}
+
+function inspectEvidenceDetails(title, key) {
+  return '<details class="inspect-evidence" data-evidence-key="' + key + '" ontoggle="loadInspectEvidence(this)">' +
+    '<summary>' + comfyEscape(title) + '</summary><pre></pre></details>';
+}
+
+function loadInspectEvidence(details) {
+  if (!details.open || details.dataset.loaded || !inspectCurrentData) return;
+  let value = inspectCurrentData;
+  for (const part of details.dataset.evidenceKey.split('.')) value = value?.[part];
+  // 使用 textContent；元数据、文件名与模型标签都不是可执行 HTML。
+  details.querySelector('pre').textContent = JSON.stringify(value ?? null, null, 2);
+  details.dataset.loaded = 'true';
+}
+
+function renderDeepEvidence(data) {
+  const report = data.deep_analysis;
+  if (!report) return '';
+  let result = '<section class="inspect-deep-report"><div class="inspect-result-section-title">深度检测 · 文件中实际读取的数据</div>' +
+    '<p class="inspect-deep-conclusion">' + comfyEscape(report.conclusion) + '</p>' +
+    '<div class="inspect-evidence-stats"><span>结构块 ' + (report.container_blocks?.length || 0) + '</span>' +
+    '<span>可读字符串 ' + (report.strings?.length || 0) + '</span><span>恢复载荷 ' + (report.payloads?.length || 0) + '</span>' +
+    '<span>隐写组合 ' + (report.pixel_analysis?.lsb_probes?.length || 0) + '</span></div>';
+  if (report.warnings?.length) result += '<p class="inspect-stage-error">有 ' + report.warnings.length + ' 条检查提示；请展开“覆盖范围与诊断”，了解未完成或受限的项目。</p>';
+  result += inspectEvidenceDetails('文件指纹、文件头与尾部边界', 'deep_analysis.file');
+  result += inspectEvidenceDetails('容器数据块、偏移与校验', 'deep_analysis.container_blocks');
+  result += inspectEvidenceDetails('可读字符串与字节来源', 'deep_analysis.strings');
+  result += inspectEvidenceDetails('嵌入文件 / XMP / C2PA 签名线索', 'deep_analysis.embedded_signatures');
+  result += inspectEvidenceDetails('恢复载荷与原始字节（Base64）', 'deep_analysis.payloads');
+  result += inspectEvidenceDetails('像素通道统计与逐项隐写探测', 'deep_analysis.pixel_analysis');
+  result += inspectEvidenceDetails('全部元数据字段与原始值', 'metadata_records');
+  result += inspectEvidenceDetails('全部解码文本', 'raw_metadata');
+  result += inspectEvidenceDetails('识别候选与来源', 'metadata_candidates');
+  result += '<details class="inspect-evidence"><summary>覆盖范围与诊断</summary>' +
+    inspectEvidenceDetails('执行步骤', 'deep_analysis.checks') +
+    inspectEvidenceDetails('扫描引擎状态', 'deep_analysis.metadata_engines') +
+    inspectEvidenceDetails('检查提示', 'deep_analysis.warnings') +
+    inspectEvidenceDetails('检查容量限制', 'deep_analysis.limits') +
+    inspectEvidenceDetails('结论适用范围', 'deep_analysis.limitations') +
+    inspectEvidenceDetails('全部诊断记录', 'diagnostics') + '</details>';
+  return result + '<button type="button" class="inspect-copy-btn" onclick="downloadInspectReport()">导出完整检测报告 JSON</button></section>';
+}
+
+function renderImageElementAnalysis(data) {
+  const analysis = data.image_element_analysis;
+  if (!analysis) return '';
+  let result = '<section class="inspect-tagger-report"><div class="inspect-result-section-title">图像元素近似分析结果</div>' +
+    '<span class="inspect-inference-badge">WD Tagger · 模型推测</span>';
+  if (analysis.status !== 'completed') return result + '<p class="inspect-stage-error">' + comfyEscape(analysis.error || '暂未完成分析') + '</p></section>';
+  result += '<p class="inspect-deep-muted">' + comfyEscape(analysis.note) + '</p>';
+  if (analysis.frame_count > 1) result += '<p class="inspect-deep-muted">这是第 1 帧的分析结果，图片共 ' + analysis.frame_count + ' 帧。</p>';
+  for (const [key, label] of [['general', '画面元素'], ['characters', '角色近似匹配'], ['ratings', '内容分级评分']]) {
+    const tags = analysis[key] || [];
+    result += '<h4>' + label + '</h4><div class="inspect-tag-list">';
+    result += tags.length ? tags.map(item => '<span class="inspect-tag"><span>' + comfyEscape(item.tag) + '</span><b>' +
+      (Number(item.score) * 100).toFixed(1) + '%</b></span>').join('') : '<span class="inspect-deep-muted">没有达到当前阈值的标签</span>';
+    result += '</div>';
+  }
+  result += '<p class="inspect-deep-muted">元素阈值 ' + analysis.thresholds.general + ' · 角色阈值 ' + analysis.thresholds.characters +
+    ' · 分数表示模型输出强度，不是事实概率。</p>';
+  result += '<button type="button" class="inspect-copy-btn" onclick="copyImageElementTags(this)">复制近似元素标签</button>';
+  result += inspectEvidenceDetails('全部标签分数（含未达阈值标签）', 'image_element_analysis.all_scores');
+  result += '<p class="inspect-deep-muted">模型：' + comfyEscape(analysis.model) + ' · 版本：' + comfyEscape(analysis.revision) + '</p>';
+  return result + '</section>';
+}
+
+function copyImageElementTags(button) {
+  const text = inspectCurrentData?.image_element_analysis?.tag_text;
+  if (!text) { button.textContent = '当前没有达标的元素标签'; return; }
+  navigator.clipboard.writeText(text).then(() => showCopyFeedback(button)).catch(() => { button.textContent = '复制失败，请手动复制'; });
+}
+
+function downloadInspectReport() {
+  if (!inspectCurrentData) return;
+  const url = URL.createObjectURL(new Blob([JSON.stringify(inspectCurrentData, null, 2)], { type: 'application/json;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = (inspectCurrentData.filename || 'image') + '.deep-report.json';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 
 function renderInspectResult(container, data, file, previewUrl) {
   const sourceStyle = getSwStyle(data.metadata_source);
@@ -2996,6 +3693,13 @@ function renderInspectResult(container, data, file, previewUrl) {
     <button class="inspect-result-clear" onclick="clearInspectResult()">✕ 清除</button>
   </div>`;
 
+  let comfyView = null;
+  try { comfyView = buildComfyView(data); } catch (error) { console.warn('ComfyUI 元数据分类失败，保留原始数据。', error); }
+  html += renderDeepPanel(data, comfyView);
+  html += renderDeepEvidence(data);
+  html += renderImageElementAnalysis(data);
+  if (comfyView) html += renderComfyView(comfyView, JSON.stringify(data.deep_analysis ? {params_dict: data.params_dict} : data, null, 2));
+
   // Prompt
   if (data.prompt) {
     html += `<div class="inspect-result-section">
@@ -3013,7 +3717,7 @@ function renderInspectResult(container, data, file, previewUrl) {
   }
 
   // Params dict as chips
-  if (data.params_dict && Object.keys(data.params_dict).length > 0) {
+  if (!comfyView && data.params_dict && Object.keys(data.params_dict).length > 0) {
     // Check if it's a simple key-value (SD-WebUI style) or nested (ComfyUI)
     const isSimple = Object.values(data.params_dict).every(v => typeof v !== 'object');
     if (isSimple) {
@@ -3037,7 +3741,7 @@ function renderInspectResult(container, data, file, previewUrl) {
   }
 
   // Params string fallback
-  if (data.params && !data.params_dict) {
+  if (!comfyView && data.params && !data.params_dict) {
     html += `<div class="inspect-result-section">
       <div class="inspect-result-section-title">参数</div>
       ${inspectTextBlock(data.params)}
@@ -3053,7 +3757,7 @@ function renderInspectResult(container, data, file, previewUrl) {
   }
 
   // Raw metadata chunks
-  if (data.raw_metadata && data.raw_metadata.length > 0) {
+  if (!data.deep_analysis && !comfyView && data.raw_metadata && data.raw_metadata.length > 0) {
     html += `<div class="inspect-result-section">
       <div class="inspect-result-section-title">原始文本块 (${data.raw_metadata.length})</div>`;
     for (const chunk of data.raw_metadata) {
@@ -3067,7 +3771,7 @@ function renderInspectResult(container, data, file, previewUrl) {
   }
 
   // EXIF
-  if (data.exif && Object.keys(data.exif).length > 0) {
+  if (!data.deep_analysis && data.exif && Object.keys(data.exif).length > 0) {
     const exifId = 'exif_' + Math.random().toString(36).slice(2, 9);
     const exifCount = Object.keys(data.exif).length;
     html += `<div class="inspect-result-section">
@@ -3085,7 +3789,7 @@ function renderInspectResult(container, data, file, previewUrl) {
   }
 
   // No data at all
-  if (!data.prompt && !data.negative_prompt && (!data.params_dict || Object.keys(data.params_dict).length === 0)
+  if (!comfyView && !data.prompt && !data.negative_prompt && (!data.params_dict || Object.keys(data.params_dict).length === 0)
       && (!data.raw_metadata || data.raw_metadata.length === 0) && !data.stealth_pnginfo
       && (!data.exif || Object.keys(data.exif).length === 0)) {
     html += `<div class="inspect-result-section">
@@ -3138,10 +3842,8 @@ function toggleExifSection(btn, id) {
 }
 
 function clearInspectResult() {
-  const resultArea = document.getElementById('inspectResultArea');
-  resultArea.innerHTML = '';
-  inspectCurrentData = null;
-  // Reset file input
+  resetInspectSession();
+  document.getElementById('inspectResultArea').innerHTML = '';
   document.getElementById('inspectFileInput').value = '';
 }
 
