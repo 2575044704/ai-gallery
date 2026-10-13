@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="gallery-version" content="2.5.6">
+<meta name="gallery-version" content="2.5.7">
 <title>原典AI 图鉴</title>
 
 <link rel="preconnect" href="https://uqililh--ai-gallery-serve.modal.run" crossorigin>
@@ -413,23 +413,6 @@ button { font-family: var(--font); }
 @media (max-width: 768px)  { .gallery { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 480px)  { .gallery { grid-template-columns: 1fr; } }
 
-/* v2.5.3: 翻页期间保留同一分类/筛选下的旧卡片。 */
-.gallery[aria-busy="true"] { cursor: progress; }
-.gallery-progress {
-  position: fixed;
-  top: 74px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 110;
-  padding: 7px 14px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text2);
-  font-size: 12px;
-  pointer-events: none;
-}
-.gallery-progress[hidden] { display: none; }
-
 /* 图版卡片：白底细线，悬停时墨线加深 + 版画式偏移影 */
 .card {
   background: var(--surface);
@@ -438,7 +421,7 @@ button { font-family: var(--font); }
   border: 1px solid var(--border);
   transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
   cursor: pointer;
-  /* v2.5.3: 图片就绪即显示，保留 hover 效果。 */
+  animation: cardIn 0.35s ease both;
 }
 .card:hover {
   transform: translate(-2px, -2px);
@@ -2273,7 +2256,6 @@ body.terms-route .terms-page { display: block; }
   <span class="content-notice-text">本站拒绝收录含有色情露骨内容，如有发现，请点击举报。<span class="content-notice-muted">（图片太多了我个人管不过来 qwq）</span><br>本站非解构原典官方站，仅作图片收集。</span>
 </div>
 
-<div id="galleryProgress" class="gallery-progress" role="status" hidden>正在加载图片…</div>
 <div class="gallery-wrap">
   <div class="gallery" id="gallery"></div>
   <div class="pagination" id="pagination"></div>
@@ -2525,32 +2507,6 @@ let browseGeneration = 0;
 let browseContextKey = '';
 let browseNavigation = Object.create(null);
 let browseController = null;
-
-function beginGalleryLoad(context) {
-  const gallery = document.getElementById('gallery');
-  const contextKey = JSON.stringify(context);
-  const keepCards = gallery.dataset.context === contextKey && gallery.querySelector('.card');
-  hideMetaTooltip();
-  closeLightbox();
-  if (!keepCards) {
-    gallery.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    document.getElementById('pagination').innerHTML = '';
-  }
-  gallery.dataset.context = contextKey;
-  gallery.setAttribute('aria-busy', 'true');
-  // 旧卡片仅作加载占位，避免点击时使用已经切换的分页/分类状态。
-  gallery.inert = true;
-  document.getElementById('galleryProgress').hidden = !keepCards;
-  return gallery;
-}
-
-function finishGalleryLoad(generation) {
-  if (generation !== browseGeneration) return;
-  const gallery = document.getElementById('gallery');
-  gallery.setAttribute('aria-busy', 'false');
-  gallery.inert = false;
-  document.getElementById('galleryProgress').hidden = true;
-}
 
 function thumbnailLoadAttributes(index) {
   const width = window.innerWidth;
@@ -4265,7 +4221,11 @@ async function loadTagSearch(query) {
   const generation = ++browseGeneration;
   const context = { mode: 'search', collection: currentCollection, q: query, type: 'all' };
   const requestedPage = currentPage;
-  const gallery = beginGalleryLoad(context);
+  const gallery = document.getElementById('gallery');
+  hideMetaTooltip();
+  closeLightbox();
+  gallery.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  document.getElementById('pagination').innerHTML = '';
 
   try {
     const data = await fetchBrowsePage(context, requestedPage, generation);
@@ -4285,7 +4245,7 @@ async function loadTagSearch(query) {
     gallery.innerHTML = currentItems.map((item, i) => {
       const isBlurred = item.safety === 'nsfw';
       return `
-      <div class="card" data-idx="${i}" onclick="openLightbox(${i})">
+      <div class="card" data-idx="${i}" onclick="openLightbox(${i})" style="animation-delay:${i * 0.04}s">
         <div class="card-img-wrap">
           <img src="${escapeHtml(getAssetUrl(item.thumb_url))}" alt="${escapeHtml(item.filename)}" ${thumbnailLoadAttributes(i)}>
           ${isBlurred ? `<div class="blur-overlay"><span class="blur-hint">已处理</span></div>` : ''}
@@ -4330,8 +4290,6 @@ async function loadTagSearch(query) {
       `Tag 搜索: <span>${escapeHtml(query)}</span> — <span style="color:var(--danger)">搜索失败</span>`;
     document.getElementById('pagination').innerHTML = '';
     return false;
-  } finally {
-    finishGalleryLoad(generation);
   }
 }
 
@@ -4371,7 +4329,11 @@ async function loadImages() {
   if (searchQQ) context.qq = searchQQ;
   if (softwareFilter) context.software = softwareFilter;
   const requestedPage = currentPage;
-  const gallery = beginGalleryLoad(context);
+  const gallery = document.getElementById('gallery');
+  hideMetaTooltip();
+  closeLightbox();
+  gallery.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  document.getElementById('pagination').innerHTML = '';
 
   try {
     const data = await fetchBrowsePage(context, requestedPage, generation);
@@ -4389,7 +4351,7 @@ async function loadImages() {
     gallery.innerHTML = currentItems.map((item, i) => {
       const isBlurred = item.safety === 'nsfw';
       return `
-      <div class="card" data-idx="${i}" onclick="openLightbox(${i})">
+      <div class="card" data-idx="${i}" onclick="openLightbox(${i})" style="animation-delay:${i * 0.04}s">
         <div class="card-img-wrap">
           <img src="${escapeHtml(getAssetUrl(item.thumb_url))}" alt="${escapeHtml(item.filename)}" ${thumbnailLoadAttributes(i)}>
           ${isBlurred ? `<div class="blur-overlay"><span class="blur-hint">已处理</span></div>` : ''}
@@ -4430,8 +4392,6 @@ async function loadImages() {
       </div>`;
     document.getElementById('pagination').innerHTML = '';
     return false;
-  } finally {
-    finishGalleryLoad(generation);
   }
 }
 
