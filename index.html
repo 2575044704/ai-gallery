@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="gallery-version" content="2.5.7">
+<meta name="gallery-version" content="1.5.12">
 <title>原典AI 图鉴</title>
 
 <link rel="preconnect" href="https://uqililh--ai-gallery-serve.modal.run" crossorigin>
@@ -2080,7 +2080,7 @@ body.terms-route .terms-page { display: block; }
   }
 }
 
-/* ===== v2.5.1: grouped ComfyUI generation metadata ===== */
+/* ===== v1.5.1: grouped ComfyUI generation metadata ===== */
 .meta-tooltip { width: min(480px, calc(100vw - 24px)); }
 .lb-meta-panel { width: 440px; }
 .lightbox-content:has(.lb-meta-panel:not(.hidden)) .lightbox-img-side,
@@ -2142,7 +2142,7 @@ body.terms-route .terms-page { display: block; }
   .comfy-stage > summary::before, .comfy-raw > summary::before { transition: none; }
 }
 
-/* v2.5.2: 深度检测 */
+/* v1.5.2: 深度检测 */
 .inspect-deep-panel { margin: 18px 0; padding: 18px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--bg-secondary, #f7f4ef); }
 .inspect-deep-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .inspect-deep-panel p, .inspect-deep-report p, .inspect-tagger-report p { font-size: 13px; line-height: 1.7; margin: 12px 0; overflow-wrap: anywhere; }
@@ -2165,6 +2165,57 @@ body.terms-route .terms-page { display: block; }
 .inspect-tag { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 5px; max-width: 100%; overflow-wrap: anywhere; }
 .inspect-tag b { font-size: 11px; color: var(--accent); white-space: nowrap; }
 @media (max-width: 540px) { .inspect-deep-panel, .inspect-deep-report, .inspect-tagger-report { padding: 12px; } }
+
+/* ===== v1.5.8: release notes ===== */
+.release-notes { margin-top: 20px; }
+.release-notes .release-intro { color: var(--text2); font-size: 12px; }
+.release-entry { padding: 4px 0 14px; border-bottom: 1px solid var(--border); }
+.release-entry h2 { line-height: 1.7; }
+.release-version { display: inline-block; margin-right: 6px; font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+.release-entry ul { padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.release-incident { margin-top: 12px; padding: 12px 14px; border-left: 3px solid var(--seal); background: var(--seal-wash); }
+.release-incident p { font-size: 13px; line-height: 1.9; }
+.release-incident strong { color: var(--seal); }
+
+/* ===== v1.5.9: crawler notice ===== */
+.release-crawler-notice {
+  margin: 14px 0 16px;
+  padding: 15px 16px;
+  border: 2px solid var(--seal);
+  border-left-width: 6px;
+  border-radius: 3px;
+  background: var(--seal-wash);
+}
+.notice-modal-body .release-crawler-notice p {
+  color: var(--seal);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.9;
+  margin: 0;
+}
+.release-crawler-contact { margin-top: 10px; color: var(--ink-soft); font-size: 13px; line-height: 1.8; }
+.release-crawler-contact a { color: var(--seal); font-family: var(--mono); font-weight: 600; text-decoration: underline; overflow-wrap: anywhere; }
+
+/* ===== v1.5.10: copyright, metadata and reproducibility notice ===== */
+.site-disclaimer { margin: 20px 0 24px; padding: 16px 18px; border: 1px solid var(--border-strong); border-left: 4px solid var(--accent); border-radius: 3px; background: var(--accent-wash); }
+.notice-modal-body .site-disclaimer h2 { margin: 0 0 14px; color: var(--accent-deep); font-size: 16px; line-height: 1.6; }
+.notice-modal-body .site-disclaimer h3 { margin: 0 0 4px; color: var(--ink); font: 700 13px/1.7 var(--font); }
+.site-disclaimer-item + .site-disclaimer-item { margin-top: 14px; }
+.notice-modal-body .site-disclaimer p { font-size: 13px; line-height: 1.9; }
+.site-disclaimer .site-disclaimer-contact { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+.site-disclaimer a { color: var(--accent-deep); text-decoration: underline; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .site-disclaimer { padding: 14px; } }
+
+/* ===== v1.5.12: expanded site purpose and original-image collection scope ===== */
+.gallery-scope-notice { margin: 0 0 28px; padding: 20px 0 24px; border-top: 5px solid var(--accent-deep); border-bottom: 1px solid var(--border-strong); }
+.notice-modal-body .gallery-scope-notice h2 { margin: 0 0 20px; color: var(--ink); font: 800 22px/1.5 var(--font); }
+.notice-modal-body .gallery-scope-notice h3 { margin: 24px 0 8px; color: var(--accent-deep); font: 700 17px/1.7 var(--font); }
+.notice-modal-body .gallery-scope-notice p { margin: 0; color: var(--ink); font-size: 15px; font-weight: 400; line-height: 2; overflow-wrap: anywhere; }
+.notice-modal-body .gallery-scope-notice .gallery-scope-range { font-size: 17px; font-weight: 700; line-height: 1.9; }
+.notice-modal-body .gallery-scope-notice .gallery-scope-excluded { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.gallery-scope-range strong { color: var(--accent-deep); font-weight: 800; }
+.gallery-scope-excluded strong { color: var(--seal); }
+@media (max-width: 600px) { .gallery-scope-notice { padding-top: 16px; } .notice-modal-body .gallery-scope-notice h2 { font-size: 20px; } .notice-modal-body .gallery-scope-notice .gallery-scope-range { font-size: 16px; } }
 
 </style>
 </head>
@@ -2189,9 +2240,121 @@ body.terms-route .terms-page { display: block; }
       <h1 id="noticeTitle">欢迎使用原典AI图库（内测）！</h1>
     </div>
     <div class="notice-modal-body">
-      <p>本站旨在为AI绘画用户提供便捷的提示词参考。涵盖 Stable Diffusion WebUI、ComfyUI、NovelAI 等三大常见开源 AI 绘画程序。</p>
+      <section class="gallery-scope-notice" id="galleryScopeNotice" tabindex="-1" aria-labelledby="galleryScopeTitle">
+        <h2 id="galleryScopeTitle">网站定位与原图收录范围</h2>
+        <p class="gallery-scope-range"><strong>提供原图：</strong>ComfyUI、NovelAI、Stable Diffusion WebUI（及其衍生）。</p>
+        <p class="gallery-scope-range gallery-scope-excluded"><strong>不提供以下原图：</strong>GPT image 系列、豆包 AI、banana 系列，以及其它无保留元数据的第三方 AI 创作平台生成的图片。</p>
 
-      <h2>2026年6月3日 v0.4.alpha更新：</h2>
+        <h3>面向 AI 绘画学习与创作参考</h3>
+        <p>原典AI图库是面向 AI 绘画爱好者、创作者与工作流研究者的原图参考站，围绕图片本身及其保留的生成信息组织内容。本站将作品展示、原图获取、提示词参考与参数查看结合起来，方便你在浏览画面的同时，进一步了解作品使用了怎样的描述、模型与生成设置，将欣赏作品的过程延伸为学习和积累创作经验的过程。</p>
+
+        <h3>从原图中寻找创作线索</h3>
+        <p>通过图片中实际保留的元数据，你可以查看正向提示词、负向提示词、模型名称、LoRA、种子、采样器及采样步数等信息，比较不同作品在构图、光影、风格和细节处理上的思路。对于包含工作流记录的图片，还可以结合节点和参数研究生成流程，梳理基础出图、二次采样或局部细化等环节，为搭建和调整自己的创作流程提供参考。</p>
+
+        <h3>让作品与生成信息一起被保留</h3>
+        <p>本站重视原图所携带的创作线索，希望让有参考价值的图像与对应生成信息尽可能一起留存，便于日后查阅、比较和研究。你可以从一张喜欢的图片出发，寻找提示词表达、观察模型与 LoRA 的搭配方式、尝试调整采样设置，再将学到的方法融入自己的作品。</p>
+      </section>
+
+      <!-- BEGIN SITE DISCLAIMER -->
+      <section class="site-disclaimer" id="siteDisclaimer" tabindex="-1" aria-labelledby="siteDisclaimerTitle">
+        <h2 id="siteDisclaimerTitle">版权与使用声明</h2>
+        <div class="site-disclaimer-item">
+          <h3>图片版权与授权</h3>
+          <p>本站尊重图片及相关素材的合法权利。站内展示和下载功能不代表授予转载、商用或其他再利用授权，使用前请核对原作者或权利人的授权范围。</p>
+        </div>
+        <div class="site-disclaimer-item">
+          <h3>元数据可能被篡改</h3>
+          <p>提示词、模型名称、种子、作者信息等元数据可能被修改、伪造、删除，或在转存传播中丢失。本站展示的是文件现有记录，解析结果仅供参考，请结合原始来源核对真实性与完整性。</p>
+        </div>
+        <div class="site-disclaimer-item">
+          <h3>相同种子也可能无法还原原图</h3>
+          <p>设备与 GPU、软件版本、计算精度及运算方式的差异，可能影响随机噪声生成和降噪结果。模型、LoRA、VAE、采样参数及未记录的后处理也会影响最终图像。即使提示词和种子相同，仍可能产生差异，本站不保证逐像素还原原图。</p>
+        </div>
+        <p class="site-disclaimer-contact">如发现侵权、署名错误或信息问题，请通过图片举报功能反馈，或将图片链接、问题说明及相关证明发送至 <a href="mailto:Nya@vip.qq.com">Nya@vip.qq.com</a>，我们会核实处理。</p>
+      </section>
+      <!-- Sources: https://www.ncac.gov.cn/xxfb/flfg/flfg_532/202103/t20210309_50530.html ; https://exiftool.org/writing.html ; https://huggingface.co/docs/diffusers/main/using-diffusers/reusing_seeds -->
+      <!-- END SITE DISCLAIMER -->
+
+      <!-- BEGIN RELEASE NOTES: newest first -->
+      <div class="release-notes" id="releaseNotes" tabindex="-1" aria-label="更新说明">
+        <p class="release-intro">更新记录整理于 2026 年 10 月 13 日，以下按由新到旧的顺序排列。</p>
+        <section class="release-entry" data-release-version="1.5.4">
+          <h2><span class="release-version">v1.5.4</span> 前端基础反调试</h2>
+          <ul>
+            <li>新增基于 JavaScript debugger 的基础反调试模块，每隔 800 毫秒执行一次。</li>
+            <li>开发者工具启用断点调试时，可触发页面脚本暂停。</li>
+          </ul>
+        </section>
+        <section class="release-entry" data-release-version="1.5.3">
+          <h2><span class="release-version">v1.5.3</span> 图片加载与缓存优化</h2>
+          <ul>
+            <li>修复反爬改造后图片链接频繁变化、缓存难以复用的问题。</li>
+            <li>恢复缩略图的一天公共缓存，减少重复下载。</li>
+            <li>调整资源凭证和分页请求头机制，兼顾基础反爬与加载效率。</li>
+          </ul>
+        </section>
+        <section class="release-entry" data-release-version="1.5.2">
+          <h2><span class="release-version">v1.5.2</span> 原图数据读取更新</h2>
+          <ul>
+            <li>当常规读取未发现有效生成数据时，可进一步执行深度检测。</li>
+            <li>增加文件结构、尾随数据、压缩内容、字符串及像素低位隐写等检查。</li>
+            <li>新增 WD Tagger 辅助识别画面元素，生成参考标签。</li>
+            <li>分别展示文件中读取到的生成信息与图像分析结果，并保留检测过程中的诊断记录。</li>
+          </ul>
+        </section>
+        <section class="release-entry" data-release-version="1.5.1">
+          <h2><span class="release-version">v1.5.1</span> 元数据扫描与 ComfyUI 信息展示升级</h2>
+          <ul>
+            <li>扩展 EXIF、图片文本块和其他元数据字段的扫描范围，保留未知字段、原始字节及不同来源的记录。</li>
+            <li>综合多种解析方式，改善 ComfyUI、WebUI、NovelAI 等生成信息的识别。</li>
+            <li>增加字段来源、候选结果和详细诊断，方便查看信息从哪里读取、哪些步骤出现异常。</li>
+            <li>重新整理 ComfyUI 信息卡片，按正向提示词、模型、LoRA、负向提示词、采样参数依次展示。</li>
+            <li>单独列出二次采样、放大重绘及手部、面部等局部优化阶段。</li>
+          </ul>
+        </section>
+        <section class="release-entry" data-release-version="1.5.0">
+          <h2><span class="release-version">v1.5.0</span> 基础反爬保护</h2>
+          <aside class="release-crawler-notice" aria-label="禁止爬虫与申请说明">
+            <p>考虑到本站免费流量存在上限，因此本站是禁止爬虫的，如果你需要请向联系邮箱发送申请，谢谢配合。</p>
+            <div class="release-crawler-contact">申请邮箱：<a href="mailto:Nya@vip.qq.com">Nya@vip.qq.com</a></div>
+          </aside>
+          <ul>
+            <li>引入加密分页凭证与动态请求头校验。</li>
+            <li>为缩略图、原图和元数据链接增加访问凭证。</li>
+            <li>增加翻页频率限制，关闭旧版直接按页码枚举的接口，提高简单批量抓取脚本的使用门槛。</li>
+          </ul>
+        </section>
+        <section class="release-entry" data-release-version="1.4.0">
+          <h2><span class="release-version">v1.4.0</span> 访问日志</h2>
+          <ul>
+            <li>新增持久化访问日志，记录北京时间、访问 IP、请求路径、状态码、响应耗时及异常信息。</li>
+            <li>各运行实例独立保存日志，方便追溯故障、排查异常访问和加载问题。</li>
+            <li>日志写入失败时输出明确的错误信息。</li>
+          </ul>
+        </section>
+        <section class="release-entry" data-release-version="1.3.1">
+          <h2><span class="release-version">v1.3.1</span> 隐写数据读取修复</h2>
+          <ul>
+            <li>修复部分 WebP、AVIF 图片中透明通道隐写数据被漏读的问题。</li>
+            <li>完善 NovelAI 元数据解析，保留并展示更完整的 Comment 生成参数。</li>
+          </ul>
+        </section>
+        <section class="release-entry" data-release-version="1.3.0">
+          <h2><span class="release-version">v1.3.0</span> 关键词搜索与事故记录</h2>
+          <ul>
+            <li>新增 Tag、提示词及其他图片元数据的关键词搜索。</li>
+            <li>支持多个关键词组合查询：空格或逗号表示同时匹配，| 表示匹配其中一组。</li>
+            <li>支持按 QQ、群名和生成软件等信息搜索。</li>
+            <li>完善搜索索引的增量同步，新图入库、元数据变动和图片删除能够同步更新索引。</li>
+          </ul>
+          <div class="release-incident">
+            <p><strong>事故说明：</strong>图片收集 Bot 自 <strong>2026 年 9 月 27 日</strong>起遭遇频繁下线问题，直到 <strong>2026 年 10 月 7 日</strong>才修复。<strong>在此期间，图片发生了严重损失。</strong>此次事故及其造成的图片损失，在本版本更新记录中正式补记。</p>
+          </div>
+        </section>
+      </div>
+      <!-- END RELEASE NOTES -->
+
+      <h2>2026年6月3日 v1.4.alpha更新：</h2>
       <ol>
         <li>移除了所有 NSFW 图片。</li>
         <li>新增用户条款与举报功能。由于站长无法对图片逐一排查，因此如果发现违规图片的话，第一时间举报哦，我看到后会处理。</li>
@@ -2266,6 +2429,8 @@ body.terms-route .terms-page { display: block; }
     <div class="source-tag">图片主要来源于解构原典群</div>
     <div class="dev-credit">Developed by <span>正在加载...</span></div>
     <div class="footer-links">
+      <a href="#releaseNotes" onclick="openUpdateNotes(event)">更新说明</a>
+      <span>·</span>
       <a href="#/terms" onclick="navigateToTerms(event)">用户条款</a>
       <span>·</span>
       <a href="./" onclick="navigateToGallery(event)">返回图库</a>
@@ -2502,7 +2667,7 @@ let softwareList = [];
 let softwareListLoaded = false;
 let filterDropdownOpen = false;
 
-/* ===== v2.5.3: server-issued tickets; accepts fixed or legacy header names ===== */
+/* ===== v1.5.3: server-issued tickets; accepts fixed or legacy header names ===== */
 let browseGeneration = 0;
 let browseContextKey = '';
 let browseNavigation = Object.create(null);
@@ -2633,7 +2798,7 @@ function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ===== v2.5.1: ComfyUI graph-aware metadata, shared by cards and inspector ===== */
+/* ===== v1.5.1: ComfyUI graph-aware metadata, shared by cards and inspector ===== */
 function parseComfyJSON(value) {
   if (typeof value !== 'string') return value;
   const text = value.trim();
@@ -3456,7 +3621,7 @@ fileInput.addEventListener('change', e => {
   }
 });
 
-/* v2.5.2: 按需深度检测；文件证据与图像推测分开呈现。 */
+/* v1.5.2: 按需深度检测；文件证据与图像推测分开呈现。 */
 let inspectCurrentFile = null;
 let inspectPreviewUrl = '';
 let inspectSession = 0;
@@ -3491,7 +3656,7 @@ async function inspectRequest(endpoint, file, signal, timeoutMs = 240000) {
     try { data = await response.json(); }
     catch { throw new Error('服务器未返回有效结果（HTTP ' + response.status + '）'); }
     if (!response.ok) {
-      if (response.status === 404) throw new Error('后端尚未升级到 v2.5.2，请部署配套后端后重试。');
+      if (response.status === 404) throw new Error('后端尚未升级到 v1.5.2，请部署配套后端后重试。');
       throw new Error(typeof data.detail === 'string' ? data.detail : '请求失败（HTTP ' + response.status + '）');
     }
     return data;
@@ -3579,7 +3744,7 @@ async function startDeepInspect() {
       const result = await inspectRequest(endpoint, file, signal);
       if (session !== inspectSession) return;
       if (kind === 'deep') {
-        if (!result.deep_analysis) throw new Error('后端返回了常规结果，请确认已部署 v2.5.2。');
+        if (!result.deep_analysis) throw new Error('后端返回了常规结果，请确认已部署 v1.5.2。');
         const tagger = inspectCurrentData.image_element_analysis;
         inspectCurrentData = result;
         if (tagger) inspectCurrentData.image_element_analysis = tagger;
@@ -3933,6 +4098,21 @@ function showWelcomeNoticeIfNeeded() {
     btn.disabled = false;
     btn.textContent = '确定进入';
   }, 1000);
+}
+
+function openUpdateNotes(event) {
+  event?.preventDefault();
+  const backdrop = document.getElementById('noticeModalBackdrop');
+  const btn = document.getElementById('noticeConfirmBtn');
+  clearInterval(noticeCountdownTimer);
+  noticeCountdownTimer = null;
+  btn.disabled = false;
+  btn.textContent = '关闭';
+  backdrop.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  const notes = document.getElementById('galleryScopeNotice');
+  notes.focus({ preventScroll: true });
+  notes.scrollIntoView({ block: 'start' });
 }
 
 function closeWelcomeNotice() {
