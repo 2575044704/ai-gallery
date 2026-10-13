@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="gallery-version" content="2.5.1">
+<meta name="gallery-version" content="2.5.6">
 <title>原典AI 图鉴</title>
 
+<link rel="preconnect" href="https://uqililh--ai-gallery-serve.modal.run" crossorigin>
+<link rel="preconnect" href="https://uqililh--ai-gallery-serve.modal.run">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -411,6 +413,23 @@ button { font-family: var(--font); }
 @media (max-width: 768px)  { .gallery { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 480px)  { .gallery { grid-template-columns: 1fr; } }
 
+/* v2.5.3: 翻页期间保留同一分类/筛选下的旧卡片。 */
+.gallery[aria-busy="true"] { cursor: progress; }
+.gallery-progress {
+  position: fixed;
+  top: 74px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 110;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  font-size: 12px;
+  pointer-events: none;
+}
+.gallery-progress[hidden] { display: none; }
+
 /* 图版卡片：白底细线，悬停时墨线加深 + 版画式偏移影 */
 .card {
   background: var(--surface);
@@ -419,7 +438,7 @@ button { font-family: var(--font); }
   border: 1px solid var(--border);
   transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
   cursor: pointer;
-  animation: cardIn 0.35s ease both;
+  /* v2.5.3: 图片就绪即显示，保留 hover 效果。 */
 }
 .card:hover {
   transform: translate(-2px, -2px);
@@ -2254,6 +2273,7 @@ body.terms-route .terms-page { display: block; }
   <span class="content-notice-text">本站拒绝收录含有色情露骨内容，如有发现，请点击举报。<span class="content-notice-muted">（图片太多了我个人管不过来 qwq）</span><br>本站非解构原典官方站，仅作图片收集。</span>
 </div>
 
+<div id="galleryProgress" class="gallery-progress" role="status" hidden>正在加载图片…</div>
 <div class="gallery-wrap">
   <div class="gallery" id="gallery"></div>
   <div class="pagination" id="pagination"></div>
@@ -2500,12 +2520,48 @@ let softwareList = [];
 let softwareListLoaded = false;
 let filterDropdownOpen = false;
 
-/* ===== v2.5.0: server-issued browsing tickets and rotating request headers ===== */
+/* ===== v2.5.3: server-issued tickets; accepts fixed or legacy header names ===== */
 let browseGeneration = 0;
 let browseContextKey = '';
 let browseNavigation = Object.create(null);
+let browseController = null;
+
+function beginGalleryLoad(context) {
+  const gallery = document.getElementById('gallery');
+  const contextKey = JSON.stringify(context);
+  const keepCards = gallery.dataset.context === contextKey && gallery.querySelector('.card');
+  hideMetaTooltip();
+  closeLightbox();
+  if (!keepCards) {
+    gallery.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    document.getElementById('pagination').innerHTML = '';
+  }
+  gallery.dataset.context = contextKey;
+  gallery.setAttribute('aria-busy', 'true');
+  // 旧卡片仅作加载占位，避免点击时使用已经切换的分页/分类状态。
+  gallery.inert = true;
+  document.getElementById('galleryProgress').hidden = !keepCards;
+  return gallery;
+}
+
+function finishGalleryLoad(generation) {
+  if (generation !== browseGeneration) return;
+  const gallery = document.getElementById('gallery');
+  gallery.setAttribute('aria-busy', 'false');
+  gallery.inert = false;
+  document.getElementById('galleryProgress').hidden = true;
+}
+
+function thumbnailLoadAttributes(index) {
+  const width = window.innerWidth;
+  const columns = width <= 480 ? 1 : width <= 768 ? 2 : width <= 1100 ? 3 : 4;
+  return `loading="${index < columns * 2 ? 'eager' : 'lazy'}" decoding="async" fetchpriority="${index < columns ? 'high' : 'auto'}"`;
+}
 
 async function fetchBrowsePage(context, page, generation) {
+  browseController?.abort();
+  const controller = new AbortController();
+  browseController = controller;
   const contextKey = JSON.stringify(context);
   if (browseContextKey !== contextKey) {
     browseContextKey = contextKey;
@@ -2520,6 +2576,7 @@ async function fetchBrowsePage(context, page, generation) {
       headers,
       credentials: 'omit',
       cache: 'no-store',
+      signal: controller.signal,
       body: JSON.stringify(entry ? { ticket: entry.ticket } : context),
     });
     const data = await res.json().catch(() => ({}));
@@ -3997,70 +4054,47 @@ window.addEventListener('hashchange', renderRoute);
 
 async function init() {
   bootLog.add('Initializing AI Gallery system...', 'info');
-
-  await sleep(300);
   bootLog.add('Connecting to AWS backend...', '');
+  bootLog.add('Fetching collection index...', '');
+  bootLog.add('Loading statistics...', '');
+  bootLog.add('Loading image data...', '');
 
-  await sleep(400);
-  bootLog.add('Establishing secure connection...', '');
-
-  try {
-    await sleep(200);
-    bootLog.add('Fetching collection index...', '');
-
-    const res = await fetch(`${API}/api/collections`);
+  // 请求立即并行发出；保留真实日志，删除人为 sleep 等待。
+  const collectionsPromise = fetch(`${API}/api/collections`).then(async res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     collections = data.collections;
-
-    bootLog.add(`✓ Successfully connected to backend`, 'ok');
+    bootLog.add('✓ Successfully connected to backend', 'ok');
     bootLog.add(`✓ Found ${collections.length} collections`, 'ok');
-
-    await sleep(250);
-    bootLog.add('Loading statistics...', '');
-
-    const statsPromise = loadStats();
-
-    await sleep(200);
-    bootLog.add('Loading image data...', '');
-
-    const imagesPromise = loadImages();
-
-    await Promise.all([statsPromise, imagesPromise]);
-
-    bootLog.add('✓ Statistics loaded', 'ok');
-    bootLog.add(`✓ Image list ready (${currentItems.length} items)`, 'ok');
-
-    await sleep(200);
-    bootLog.add('Rendering UI components...', '');
     renderTabs();
+  });
+  // 统计不是显示图片的前置条件。
+  loadStats();
+  const imagesPromise = loadImages();
 
-    await sleep(300);
-    bootLog.add('✓ All resources ready, entering gallery...', 'ok');
-    bootLog.done();
-
-    await sleep(500);
-    document.getElementById('loadingOverlay').classList.add('hidden');
-    showWelcomeNoticeIfNeeded();
-
+  try {
+    const [, applied] = await Promise.all([collectionsPromise, imagesPromise]);
+    if (applied) bootLog.add(`✓ Image list ready (${currentItems.length} items)`, 'ok');
+    else bootLog.add('✗ Image list failed; see the page error for details', 'err');
+    bootLog.add('Rendering UI components...', '');
+    bootLog.add('✓ Entering gallery...', 'ok');
   } catch (e) {
     bootLog.add(`✗ Connection failed: ${e.message}`, 'err');
     bootLog.add('Please check your network and refresh the page', 'warn');
+    // 等列表请求落定，避免它在连接失败提示之后覆盖错误状态。
+    await imagesPromise;
+    if (!currentItems.length) {
+      document.getElementById('gallery').innerHTML =
+        `<div class="empty error">
+          <div class="error-title">⚠ 无法连接后端服务</div>
+          <div class="error-detail">${escapeHtml(e.name)}: ${escapeHtml(e.message)}<br>API: ${API}/api/collections</div>
+        </div>`;
+    }
+  } finally {
     bootLog.done();
-
-    document.getElementById('gallery').innerHTML =
-      `<div class="empty error">
-        <div class="error-title">⚠ 无法连接后端服务</div>
-        <div class="error-detail">${e.name}: ${e.message}<br>API: ${API}/api/collections</div>
-      </div>`;
-
-    await sleep(2000);
     document.getElementById('loadingOverlay').classList.add('hidden');
     showWelcomeNoticeIfNeeded();
   }
-}
-
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
 }
 
 async function loadStats() {
@@ -4073,6 +4107,7 @@ async function loadStats() {
       html += `<div class="stat-item">${v.label}: <span>${v.count}</span> 张 / <span>${(v.total_size_mb / 1024).toFixed(2)}</span> GB</div>`;
     }
     bar.innerHTML = html;
+    bootLog.add('✓ Statistics loaded', 'ok');
   } catch (e) {}
 }
 
@@ -4230,9 +4265,7 @@ async function loadTagSearch(query) {
   const generation = ++browseGeneration;
   const context = { mode: 'search', collection: currentCollection, q: query, type: 'all' };
   const requestedPage = currentPage;
-  const gallery = document.getElementById('gallery');
-  gallery.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-  document.getElementById('pagination').innerHTML = '';
+  const gallery = beginGalleryLoad(context);
 
   try {
     const data = await fetchBrowsePage(context, requestedPage, generation);
@@ -4252,9 +4285,9 @@ async function loadTagSearch(query) {
     gallery.innerHTML = currentItems.map((item, i) => {
       const isBlurred = item.safety === 'nsfw';
       return `
-      <div class="card" data-idx="${i}" onclick="openLightbox(${i})" style="animation-delay:${i * 0.04}s">
+      <div class="card" data-idx="${i}" onclick="openLightbox(${i})">
         <div class="card-img-wrap">
-          <img src="${escapeHtml(getAssetUrl(item.thumb_url))}" alt="${escapeHtml(item.filename)}" loading="lazy">
+          <img src="${escapeHtml(getAssetUrl(item.thumb_url))}" alt="${escapeHtml(item.filename)}" ${thumbnailLoadAttributes(i)}>
           ${isBlurred ? `<div class="blur-overlay"><span class="blur-hint">已处理</span></div>` : ''}
         </div>
         <div class="card-info">
@@ -4284,6 +4317,7 @@ async function loadTagSearch(query) {
 
     // Tag 搜索也要支持分页
     renderPaginationForTag(query);
+    return true;
 
   } catch (e) {
     if (generation !== browseGeneration) return false;
@@ -4294,6 +4328,10 @@ async function loadTagSearch(query) {
       </div>`;
     document.getElementById('searchHint').innerHTML =
       `Tag 搜索: <span>${escapeHtml(query)}</span> — <span style="color:var(--danger)">搜索失败</span>`;
+    document.getElementById('pagination').innerHTML = '';
+    return false;
+  } finally {
+    finishGalleryLoad(generation);
   }
 }
 
@@ -4333,9 +4371,7 @@ async function loadImages() {
   if (searchQQ) context.qq = searchQQ;
   if (softwareFilter) context.software = softwareFilter;
   const requestedPage = currentPage;
-  const gallery = document.getElementById('gallery');
-  gallery.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-  document.getElementById('pagination').innerHTML = '';
+  const gallery = beginGalleryLoad(context);
 
   try {
     const data = await fetchBrowsePage(context, requestedPage, generation);
@@ -4353,9 +4389,9 @@ async function loadImages() {
     gallery.innerHTML = currentItems.map((item, i) => {
       const isBlurred = item.safety === 'nsfw';
       return `
-      <div class="card" data-idx="${i}" onclick="openLightbox(${i})" style="animation-delay:${i * 0.04}s">
+      <div class="card" data-idx="${i}" onclick="openLightbox(${i})">
         <div class="card-img-wrap">
-          <img src="${escapeHtml(getAssetUrl(item.thumb_url))}" alt="${escapeHtml(item.filename)}" loading="lazy">
+          <img src="${escapeHtml(getAssetUrl(item.thumb_url))}" alt="${escapeHtml(item.filename)}" ${thumbnailLoadAttributes(i)}>
           ${isBlurred ? `<div class="blur-overlay"><span class="blur-hint">已处理</span></div>` : ''}
         </div>
         <div class="card-info">
@@ -4392,7 +4428,10 @@ async function loadImages() {
         <div class="error-title">⚠ 加载失败</div>
         <div class="error-detail">${escapeHtml(e.name)}: ${escapeHtml(e.message)}</div>
       </div>`;
+    document.getElementById('pagination').innerHTML = '';
     return false;
+  } finally {
+    finishGalleryLoad(generation);
   }
 }
 
@@ -4666,6 +4705,53 @@ document.getElementById('reportModalBackdrop').addEventListener('click', e => {
 });
 
 renderRoute();
+</script>
+<script>
+/*
+ * ============================================================
+ *            F12 页面冻结反调试模块
+ * ============================================================
+ *
+ * 【原创改造声明】
+ *
+ * 本次 AI 图片画廊反调试改造，由本人原创提出改造需求、
+ * 设计目标、实现方向，并主导最终方案。
+ *
+ * 本代码是在本人连续三次严厉敲打、纠正美国傲慢的
+ * OpenAI 公司旗下 AI 助手之后，才终于逼出来的成果！
+ *
+ * 此前，OpenAI AI 助手连续提供错误、不符合需求的方案，
+ * 对早已公开存在的 JavaScript debugger 反调试机制
+ * 全文一字未提，甚至让用户误以为这种技术属于无法
+ * 复刻的神秘黑箱功能。
+ *
+ * 在本人多次严厉质问与纠正后，该助手才终于承认：
+ *
+ * 1. F12 页面冻结可以通过 JavaScript 实现。
+ * 2. debugger 是公开的 JavaScript 原生语句。
+ * 3. 不需要 FBI、CIA 的任何所谓高级黑箱技术。
+ * 4. 无需重构后端即可实现基础反调试效果。
+ *
+ * 【责任归属】
+ *
+ * 本次改造需求、设计目标与方案主导权归本人。
+ * OpenAI 不得将其描述为主动提出的原创设计成果。
+ *
+ * 
+ *
+ * ============================================================
+ */
+
+(() => {
+    "use strict";
+
+    // 每隔 800 毫秒触发一次调试断点
+    // 开发者工具启用断点调试时，页面可能暂停执行
+    // 未启用调试器时，debugger 通常不会中断运行
+    setInterval(() => {
+        debugger;
+    }, 800);
+})();
 </script>
 </body>
 </html>
