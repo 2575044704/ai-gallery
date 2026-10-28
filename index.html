@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="gallery-version" content="1.5.12">
+<meta name="gallery-version" content="1.5.13">
 <title>原典AI 图鉴</title>
 
 <link rel="preconnect" href="https://uqililh--ai-gallery-serve.modal.run" crossorigin>
@@ -2277,7 +2277,15 @@ body.terms-route .terms-page { display: block; }
 
       <!-- BEGIN RELEASE NOTES: newest first -->
       <div class="release-notes" id="releaseNotes" tabindex="-1" aria-label="更新说明">
-        <p class="release-intro">更新记录整理于 2026 年 10 月 13 日，以下按由新到旧的顺序排列。</p>
+        <p class="release-intro">更新记录整理于 2026 年 10 月 28 日，以下按由新到旧的顺序排列。</p>
+        <section class="release-entry" data-release-version="1.5.13">
+          <h2><span class="release-version">v1.5.13</span> 工作流与提示词展示修复</h2>
+          <ul>
+            <li>支持嵌套子工作流、具名控件与虚拟连线，恢复原先显示为零阶段的生成流程。</li>
+            <li>完善自定义提示词节点的解析，分别展示正负向文本、模型、LoRA 与采样参数。</li>
+            <li>图片内已保存的生成记录独立展示并支持直接复制，不再被工作流视图遮挡。</li>
+          </ul>
+        </section>
         <section class="release-entry" data-release-version="1.5.4">
           <h2><span class="release-version">v1.5.4</span> 前端基础反调试</h2>
           <ul>
@@ -2810,48 +2818,194 @@ function parseComfyJSON(value) {
   } catch { return null; }
 }
 
-function findComfyGraph(meta) {
-  const candidates = [], workflows = [], seen = new Set();
-  let budget = 160;
-  function inspect(value, depth = 0) {
-    if (!value || depth > 6 || --budget < 0) return;
-    const data = typeof value === 'string' ? parseComfyJSON(value) : value;
-    if (!data || typeof data !== 'object' || seen.has(data)) return;
-    seen.add(data);
-    if (Array.isArray(data.nodes)) workflows.push(data);
-    const nodes = Object.entries(data).filter(([, n]) => n && typeof n === 'object' &&
-      typeof n.class_type === 'string' && n.inputs && typeof n.inputs === 'object');
-    if (nodes.length) { candidates.push(nodes); return; }
-    if (Array.isArray(data)) {
-      for (const chunk of data) if (chunk && typeof chunk === 'object') inspect(chunk.text ?? chunk, depth + 1);
+// Read metadata envelopes independently of the editor/API graph. A graph must never
+// hide the prompt that an image writer already recorded in `parameters`.
+function collectComfyMetadata(meta) {
+  const prompts = [], workflows = [], records = [], seen = new Set(), seenText = new Set();
+  const queue = [{ value: meta, path: '', depth: 0 }];
+  let truncated = false;
+  for (let i = 0; i < queue.length; i++) {
+    if (i >= 12000) { truncated = true; break; }
+    let { value, path, depth } = queue[i];
+    if (value == null || depth > 24) continue;
+    if (typeof value === 'string') {
+      const text = value.trim();
+      if (!text) continue;
+      records.push({ value, path });
+      if (seenText.has(text)) continue;
+      seenText.add(text);
+      const parsed = parseComfyJSON(text);
+      if (!parsed || typeof parsed !== 'object') continue;
+      value = parsed;
+    }
+    if (typeof value !== 'object' || seen.has(value)) continue;
+    seen.add(value);
+    if (Array.isArray(value.nodes)) { workflows.push(value); continue; }
+    const entries = Object.entries(value);
+    const apiNodes = entries.filter(([, n]) => n && typeof n.class_type === 'string' &&
+      n.inputs && !Array.isArray(n.inputs) && typeof n.inputs === 'object');
+    if (apiNodes.length) { prompts.push(apiNodes); continue; }
+    if (Array.isArray(value)) {
+      for (const [index, item] of value.entries()) {
+        // Scanner records/candidates use text/value and may use any container key.
+        if (item && typeof item === 'object' && typeof item.text === 'string') {
+          queue.push({ value: item.text, path: item.source || item.keyword || path + '/' + index, depth: depth + 1 });
+        } else queue.push({ value: item, path: path + '/' + index, depth: depth + 1 });
+      }
     } else {
-      for (const key of ['prompt', 'png_metadata', 'params_dict', 'workflow', 'extra_pnginfo',
-        'metadata', 'generation_data', 'parameters', 'params', 'raw_metadata', 'exif', 'UserComment', 'Comment', 'user_comment']) {
-        if (data[key] != null) inspect(data[key], depth + 1);
+      for (const [key, item] of entries) {
+        if (typeof item === 'object' || typeof item === 'string')
+          queue.push({ value: item, path: path + '/' + key, depth: depth + 1 });
       }
     }
   }
-  inspect(meta);
-  if (!candidates.length && !workflows.length) return null;
-  // The executed API prompt takes precedence over the editor's optional / muted nodes.
-  const workflow = workflows[0];
-  if (candidates.length) {
-    const nodes = new Map(candidates[0].map(([id, n]) => [String(id), {
-      id: String(id), type: n.class_type, title: n._meta?.title || '', inputs: n.inputs, mode: 0,
-    }]));
-    return { nodes, source: 'prompt', missingWidgets: false };
+  return { prompts, workflows, records, truncated };
+}
+
+function splitComfyParameters(text) {
+  const fields = []; let start = 0, depth = 0, quote = false, escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (escaped) { escaped = false; continue; }
+    if (c === '\\' && quote) { escaped = true; continue; }
+    if (c === '"') { quote = !quote; continue; }
+    if (!quote) {
+      if ('[{('.includes(c)) depth++;
+      if (']})'.includes(c)) depth = Math.max(0, depth - 1);
+      if (c === ',' && depth === 0) { fields.push(text.slice(start, i)); start = i + 1; }
+    }
   }
-  const links = new Map((workflow.links || []).map(link => Array.isArray(link)
-    ? [String(link[0]), [String(link[1]), Number(link[2])]]
-    : [String(link.id), [String(link.origin_id), Number(link.origin_slot)]]));
-  const nodes = new Map();
-  let missingWidgets = false;
-  for (const n of workflow.nodes) {
-    if (n.id == null || typeof n.type !== 'string') continue;
-    const inputs = Object.create(null), slots = n.inputs || [];
-    const values = n.widgets_values;
-    if (values && !Array.isArray(values) && typeof values === 'object') Object.assign(inputs, values);
-    if (Array.isArray(values)) {
+  fields.push(text.slice(start));
+  return fields.map(part => {
+    const at = part.indexOf(':');
+    return at < 0 ? null : [part.slice(0, at).trim(), part.slice(at + 1).trim()];
+  }).filter(Boolean);
+}
+
+function comfyRecordedGeneration(found) {
+  const result = { positive: [], negative: [], models: [], loras: [], params: [] };
+  const used = new Set();
+  const add = (polarity, text, label) => {
+    if (typeof text !== 'string' || !text.trim()) return;
+    const key = polarity + ':' + text.trim();
+    if (!used.has(key)) { used.add(key); result[polarity].push({ text: text.trim(), label }); }
+  };
+  for (const record of found.records) {
+    const text = record.value;
+    const matches = [...text.matchAll(/(?:^|\n)Steps:\s*\d+[^\n]*/gi)];
+    const match = matches.at(-1);
+    if (match && /(?:Sampler|Seed|CFG scale):/i.test(match[0])) {
+      const head = text.slice(0, match.index).trim();
+      const parts = head.split(/(?:^|\n)\s*Negative prompt\s*:\s*/i);
+      add('positive', parts[0], '图片内嵌生成记录');
+      add('negative', parts.slice(1).join('\nNegative prompt: '), '图片内嵌生成记录');
+      for (const [key, value] of splitComfyParameters(text.slice(match.index).trim())) {
+        if (!value || result.params.some(p => p.key === key && p.value === value)) continue;
+        if (/^Model$|^VAE$/i.test(key)) result.models.push({ name: value, kind: key });
+        result.params.push({ key, label: key, value });
+      }
+    }
+  }
+  // Only envelope fields: node-local strings are classified by their connections.
+  // If the original infotext exists it is more precise than an old server fallback.
+  if (!result.positive.length && !result.negative.length) for (const { value, path } of found.records) {
+    if (/\/(?:prompt|positive_prompt|positive)$/i.test(path) && !findComfyGraphObject(value))
+      add('positive', value, '已读取的提示词');
+    if (/\/(?:negative_prompt|negative|uc)$/i.test(path) && !findComfyGraphObject(value))
+      add('negative', value, '已读取的提示词');
+  }
+  return result;
+}
+
+function findComfyGraphObject(value) {
+  const obj = parseComfyJSON(value);
+  return obj && typeof obj === 'object' && (Array.isArray(obj.nodes) ||
+    Object.values(obj).some(n => n && typeof n.class_type === 'string' && n.inputs));
+}
+
+function normalizeComfyWorkflow(workflow) {
+  const nodes = new Map(), definitions = new Map();
+  let missingWidgets = false, subgraphCount = 0, truncated = false;
+  function register(graph, depth = 0) {
+    if (depth > 24) return;
+    for (const d of graph.definitions?.subgraphs || graph.subgraphs || []) {
+      if (!d || definitions.has(d.id)) continue;
+      definitions.set(d.id, d); register(d, depth + 1);
+    }
+  }
+  register(workflow);
+  const linksOf = graph => new Map(Object.values(graph.links || {}).map(l => Array.isArray(l)
+    ? [String(l[0]), { origin: String(l[1]), slot: Number(l[2]), target: String(l[3]), targetSlot: Number(l[4]) }]
+    : [String(l.id), { origin: String(l.origin_id), slot: Number(l.origin_slot), target: String(l.target_id), targetSlot: Number(l.target_slot) }]));
+  function populate(graph, prefix = '', bindings = {}, ancestry = new Set()) {
+    const links = linksOf(graph), local = new Map(), aliases = new Map();
+    const inputId = String(graph.inputNode?.id ?? -10), outputId = String(graph.outputNode?.id ?? -20);
+    for (const raw of graph.nodes || []) {
+      if (nodes.size >= 12000) { truncated = true; break; }
+      if (!raw || raw.id == null || typeof raw.type !== 'string') continue;
+      const id = prefix + raw.id, def = definitions.get(raw.type);
+      const inputs = comfyWidgetInputs(raw, def);
+      if (inputs.__missingWidgets) { missingWidgets = true; delete inputs.__missingWidgets; }
+      const slots = Array.isArray(raw.inputs) ? raw.inputs : [];
+      const n = { id, type: raw.type, title: raw.title || def?.name || '', inputs,
+        mode: Number(raw.mode) || 0, slots, outputs: raw.outputs || [], raw, scope: prefix };
+      local.set(String(raw.id), n);
+      if (n.mode === 2) { nodes.set(id, n); continue; }
+      for (const slot of slots) {
+        const link = links.get(String(slot.link));
+        if (slot.link == null || !link) continue;
+        if (link.origin === inputId) {
+          const name = graph.inputs?.[link.slot]?.name;
+          if (name != null && Object.hasOwn(bindings, name)) inputs[slot.name] = bindings[name];
+        } else inputs[slot.name] = [prefix + link.origin, link.slot];
+      }
+      nodes.set(id, n);
+    }
+    for (const n of local.values()) {
+      const def = definitions.get(n.type);
+      if (!def || n.mode === 2 || n.mode === 4) continue;
+      if (ancestry.has(def.id) || ancestry.size >= 20) { truncated = true; continue; }
+      subgraphCount++;
+      n.subgraph = true;
+      const output = populate(def, n.id + '/', n.inputs, new Set([...ancestry, def.id]));
+      for (const [slot, value] of output.entries()) if (value !== undefined) aliases.set(n.id + ':' + slot, value);
+    }
+    function rewrite(value, seen = new Set()) {
+      if (!Array.isArray(value) || value.length !== 2) return value;
+      const key = value[0] + ':' + value[1];
+      if (!aliases.has(key) || seen.has(key)) return value;
+      seen.add(key); return rewrite(aliases.get(key), seen);
+    }
+    // Parent bindings can refer to siblings expanded after a child was populated.
+    for (const n of nodes.values()) for (const key of Object.keys(n.inputs)) n.inputs[key] = rewrite(n.inputs[key]);
+    const output = [];
+    for (const link of links.values()) if (link.target === outputId) {
+      output[link.targetSlot] = rewrite(link.origin === inputId
+        ? bindings[graph.inputs?.[link.slot]?.name] : [prefix + link.origin, link.slot]);
+    }
+    return output;
+  }
+  populate(workflow);
+  // Set/Get links are virtual; scope-local definitions win, unambiguous globals
+  // cover workflows whose setters live outside a subgraph.
+  const setters = [...nodes.values()].filter(n => n.type === 'SetNode' && n.mode === 0);
+  for (const n of nodes.values()) if (n.type === 'GetNode') {
+    const name = n.inputs.value;
+    const matches = setters.filter(s => s.inputs.value === name);
+    const local = matches.filter(s => s.scope === n.scope);
+    const selected = local.length === 1 ? local[0] : matches.length === 1 ? matches[0] : null;
+    if (selected) {
+      const slot = selected.slots.find(s => selected.inputs[s.name] !== undefined);
+      if (slot) n.inputs.input = selected.inputs[slot.name];
+    }
+  }
+  return { nodes, source: 'workflow', missingWidgets, subgraphCount, truncated };
+}
+
+function comfyWidgetInputs(n, def) {
+  const inputs = Object.create(null), values = n.widgets_values;
+  if (values && !Array.isArray(values) && typeof values === 'object') Object.assign(inputs, values);
+  if (Array.isArray(values)) {
       const schemas = {
         CheckpointLoaderSimple: ['ckpt_name'], CheckpointLoader: ['config_name', 'ckpt_name'],
         UNETLoader: ['unet_name', 'weight_dtype'], VAELoader: ['vae_name'],
@@ -2868,9 +3022,18 @@ function findComfyGraph(meta) {
         BasicScheduler: ['scheduler', 'steps', 'denoise'], CFGGuider: ['cfg'], FluxGuidance: ['guidance'],
         UltralyticsDetectorProvider: ['model_name'], SAMLoader: ['model_name', 'device_mode'],
         CLIPSetLastLayer: ['stop_at_clip_layer'], SaveImage: ['filename_prefix'],
-        PrimitiveNode: ['value'], 'PrimitiveString': ['value'], 'PrimitiveInt': ['value'], 'PrimitiveFloat': ['value'],
+        PrimitiveNode: ['value'], PrimitiveString: ['value'], PrimitiveStringMultiline: ['value'],
+        PrimitiveInt: ['value'], PrimitiveFloat: ['value'], PrimitiveBoolean: ['value'],
+        SetNode: ['value'], GetNode: ['value'], ComfySwitchNode: ['switch'], ComfySoftSwitchNode: ['switch'],
+        StringConcatenate: ['string_a', 'string_b', 'delimiter'], JoinStrings: ['delimiter'],
       };
       let schema = schemas[n.type];
+      if (def) {
+        // Promoted boundary widgets have an explicit definition. Prefer named
+        // values below; only use positional values when the count is exact.
+        const names = (def.inputs || []).filter(s => /^(STRING|INT|FLOAT|BOOLEAN|COMBO)$/.test(s.type)).map(s => s.name);
+        if (names.length === values.length) schema = names;
+      }
       // control_after_generate is a frontend-only widget and absent in some workflow versions.
       const withControl = index => typeof values[index] === 'string' && /^(fixed|increment|decrement|randomize)$/.test(values[index]);
       if (n.type === 'KSampler') schema = ['seed', ...(withControl(1) ? ['control_after_generate'] : []), 'steps', 'cfg', 'sampler_name', 'scheduler', 'denoise'];
@@ -2885,16 +3048,29 @@ function findComfyGraph(meta) {
           'inpaint_model', 'noise_mask_feather', 'tiled_encode', 'tiled_decode'];
       }
       if (schema) schema.forEach((key, i) => { if (values[i] !== undefined) inputs[key] = values[i]; });
-      else if (values.length) missingWidgets = true; // Unknown custom widget order is never guessed.
+      else if (values.length && !n.widgets_values_named) inputs.__missingWidgets = true;
+      // A custom node may serialize the exact widget names; these override legacy
+      // positional layouts, including widgets that are not shown as input sockets.
     }
-    for (const slot of slots) if (slot.link != null && links.has(String(slot.link))) inputs[slot.name] = links.get(String(slot.link));
-    nodes.set(String(n.id), { id: String(n.id), type: n.type, title: n.title || '', inputs, mode: Number(n.mode) || 0, slots, outputs: n.outputs || [] });
+  if (n.widgets_values_named && typeof n.widgets_values_named === 'object') Object.assign(inputs, n.widgets_values_named);
+  return inputs;
+}
+
+function findComfyGraph(meta, found = collectComfyMetadata(meta)) {
+  // Prefer executed API nodes. Workflows are expanded per instance so repeated
+  // subgraph IDs, inherited input values and disabled instances stay separate.
+  if (found.prompts.length) {
+    const nodes = new Map(found.prompts[0].map(([id, n]) => [String(id), {
+      id: String(id), type: n.class_type, title: n._meta?.title || '', inputs: n.inputs, mode: 0,
+    }]));
+    return { nodes, source: 'prompt', missingWidgets: false };
   }
-  return { nodes, source: 'workflow', missingWidgets };
+  return found.workflows.length ? normalizeComfyWorkflow(found.workflows[0]) : null;
 }
 
 function buildComfyView(meta) {
-  const graph = findComfyGraph(meta);
+  const found = collectComfyMetadata(meta), recorded = comfyRecordedGeneration(found);
+  const graph = findComfyGraph(meta, found);
   if (!graph) return null;
   const { nodes } = graph;
   const isLink = value => Array.isArray(value) && value.length === 2 &&
@@ -2904,7 +3080,7 @@ function buildComfyView(meta) {
     if (!isLink(value)) return null;
     const node = nodes.get(String(value[0]));
     const key = node.id + ':' + value[1];
-    if (seen.has(key) || isDisabled(node)) return null;
+    if (seen.has(key) || isDisabled(node) || seen.size > 128) return null;
     seen.add(key);
     if (node.mode === 4) {
       const type = node.outputs?.[value[1]]?.type;
@@ -2912,28 +3088,52 @@ function buildComfyView(meta) {
       // Bypass only a uniquely compatible socket. Ambiguous routes remain in raw metadata.
       return matches.length === 1 ? resolve(node.inputs[matches[0].name], seen) : null;
     }
+    if (/^(ComfySwitchNode|ComfySoftSwitchNode)$/.test(node.type)) {
+      const state = literal(node.inputs.switch, new Set(seen));
+      if (typeof state === 'boolean' || state === 0 || state === 1) {
+        const selected = node.inputs[state ? 'on_true' : 'on_false'];
+        if (isLink(selected)) return resolve(selected, seen);
+      }
+    }
     return { node, slot: value[1] };
   }
   function literal(value, seen = new Set()) {
     if (value == null || typeof value === 'object' && !isLink(value)) return null;
     if (!isLink(value)) return value;
-    const ref = resolve(value);
+    if (seen.size > 128) return null;
+    const ref = resolve(value, new Set(seen));
     if (!ref || seen.has(ref.node.id)) return null;
     seen.add(ref.node.id);
     const n = ref.node;
-    if (!/primitive|string|text|integer|float|seed|reroute/i.test(n.type)) return null;
+    if (/^(ComfySwitchNode|ComfySoftSwitchNode)$/.test(n.type)) {
+      const state = literal(n.inputs.switch, new Set(seen));
+      if (typeof state === 'boolean' || state === 0 || state === 1)
+        return literal(n.inputs[state ? 'on_true' : 'on_false'], seen);
+      return null;
+    }
+    if (!/primitive|string|text|integer|float|seed|reroute|^GetNode$|^SetNode$/i.test(n.type)) return null;
+    if (/StringConcatenate|TextConcatenate|StringMergeWithSwitch|JoinStrings/i.test(n.type)) {
+      const parts = Object.entries(n.inputs).filter(([key]) => /^(?:input\d+|text[_]?\d+|string[_]?(?:[ab]|\d+))$/.test(key));
+      const resolved = parts.filter(([key]) => ![false, 0, 'false', 'off', 'Off'].includes(n.inputs['switch' + key.replace(/^input/, '')]))
+        .map(([, v]) => literal(v, new Set(seen)));
+      if (resolved.some(v => v === null)) return null;
+      const sep = literal(n.inputs.delimiter ?? n.inputs.separator ?? ' ', new Set(seen));
+      return typeof sep === 'string' ? resolved.filter(v => v !== '').join(sep) : null;
+    }
+    if (/^(GetNode|SetNode)$/.test(n.type)) return literal(n.inputs.input ??
+      n.inputs[(n.slots || []).find(s => s.link != null)?.name], seen);
     for (const key of ['value', 'text', 'string', 'seed', 'noise_seed', 'input']) {
       if (n.inputs[key] !== undefined) return literal(n.inputs[key], seen);
     }
     return null;
   }
-  const imageInput = key => /^(latent_image|latent|samples|image|images|pixels|upscaled_image|image1|image2|image_a|image_b|pipe|basic_pipe|detailer_pipe)$/.test(key);
+  const imageInput = key => /^(latent_image|latent|samples|image|images|pixels|upscaled_image|image1|image2|image_a|image_b|inpainted_image|source|destination|tiles|initial_value1|pipe|basic_pipe|detailer_pipe)$/.test(key);
   function isDetail(n) {
-    return /^(FaceDetailer|DetailerForEach|MaskDetailer|SEGSDetailer)|(?:Hand|Face).*(?:Fix|Refin|Detail)/i.test(n.type) ||
+    return /^(FaceDetailer|DetailerForEach|MaskDetailer|SEGSDetailer)|(?:Hand|Face).*(?:Fix|Refin|Detail|Processor)/i.test(n.type) ||
       /detailer/i.test(n.type) && ('steps' in n.inputs || 'denoise' in n.inputs) && !/ToDetailerPipe|DetailerPipeTo/i.test(n.type);
   }
   function isSampler(n) {
-    return !isDetail(n) && (/^(KSampler|SamplerCustom)(?!Select|Provider)/i.test(n.type) ||
+    return !isDetail(n) && (/(?:^|_)(KSampler|SamplerCustom)(?!Select|Provider)/i.test(n.type) ||
       /UltimateSDUpscale|IterativeLatentUpscale|IterativeImageUpscale/i.test(n.type) ||
       /sampler/i.test(n.type) && ('steps' in n.inputs || 'guider' in n.inputs) && Object.keys(n.inputs).some(imageInput));
   }
@@ -2947,6 +3147,7 @@ function buildComfyView(meta) {
       seen.add(n.id);
       if (stopStages && isStage(n)) continue;
       result.push(n);
+      if (n.subgraph) continue;
       for (const [key, value] of Object.entries(n.inputs).reverse()) {
         if (!skipImage || !imageInput(key) || /pipe/.test(key)) stack.push(value);
       }
@@ -2954,7 +3155,7 @@ function buildComfyView(meta) {
     return result;
   }
   const available = [...nodes.values()].filter(n => !isDisabled(n) && n.mode !== 4);
-  const saves = available.filter(n => /^(SaveImage|SaveAnimated|ImageSave)|save.*image|image.*save/i.test(n.type));
+  const saves = available.filter(n => /^(SaveImage|SaveAnimated|ImageSave)|save.*image|image.*save/i.test(n.type) && ![false, 0].includes(literal(n.inputs.enabled)));
   const previews = available.filter(n => /^PreviewImage$/i.test(n.type));
   let roots = saves.length ? saves : previews;
   const outputId = meta.unique_id ?? meta.output_node_id;
@@ -2991,25 +3192,46 @@ function buildComfyView(meta) {
     const direct = literal(value);
     if (typeof direct === 'string' && direct.trim()) return [{ text: direct, label: '' }];
     const ref = resolve(value);
-    if (!ref || seen.has(ref.node.id + ':' + ref.slot + ':' + polarity)) return [];
+    if (!ref || seen.size > 128 || seen.has(ref.node.id + ':' + ref.slot + ':' + polarity)) return [];
     const n = ref.node, ins = n.inputs;
     seen.add(n.id + ':' + ref.slot + ':' + polarity);
     if (/ConditioningZeroOut/i.test(n.type)) return [{ text: '空条件（ConditioningZeroOut）', label: '' }];
     const entries = [];
-    const textKeys = ['text', 'text_g', 'text_l', 'clip_l', 't5xxl', 'text_t5', 'prompt', 'string'];
+    const textKeys = ['text', 'text_g', 'text_l', 'clip_l', 't5xxl', 'text_t5', 'prompt', 'string', 'base_prompt', 'artist_chain'];
+    if (/^(GetNode|SetNode)$/.test(n.type)) return promptTexts(ins.input ??
+      ins[(n.slots || []).find(s => s.link != null)?.name], polarity, seen);
+    if (/^(ComfySwitchNode|ComfySoftSwitchNode)$/.test(n.type)) {
+      const state = literal(ins.switch);
+      return typeof state === 'boolean' || state === 0 || state === 1
+        ? promptTexts(ins[state ? 'on_true' : 'on_false'], polarity, seen) : [];
+    }
+    if (/Any Switch \(rgthree\)/i.test(n.type)) {
+      for (const input of Object.values(ins)) {
+        const text = promptTexts(input, polarity, new Set(seen));
+        if (text.length) return text;
+      }
+      return [];
+    }
+    if (/StringConcatenate|TextConcatenate|StringMergeWithSwitch|JoinStrings/i.test(n.type)) {
+      // If a runtime-dependent piece cannot be evaluated, show each recorded
+      // piece with a source label instead of dropping the entire prompt.
+      return Object.entries(ins).filter(([key]) => /^(?:input\d+|text[_]?\d+|string[_]?(?:[ab]|\d+))$/.test(key) &&
+        ![false, 0, 'false', 'off', 'Off'].includes(ins['switch' + key.replace(/^input/, '')]))
+        .flatMap(([key, input]) => promptTexts(input, polarity, new Set(seen)).map(p => ({...p, label: p.label || key})));
+    }
     // These are text/conditioning sockets, never checkpoint paths, titles or the opposite prompt.
     for (const key of textKeys) {
       if (ins[key] == null) continue;
       const text = literal(ins[key]);
       if (typeof text === 'string' && text.trim()) entries.push({ text, label: textKeys.length && key !== 'text' && key !== 'prompt' ? key : '' });
-      else if (isLink(ins[key])) entries.push(...promptTexts(ins[key], polarity, new Set(seen)));
+      else if (isLink(ins[key])) entries.push(...promptTexts(ins[key], polarity, new Set(seen)).map(p => ({...p, label: p.label || (['base_prompt', 'artist_chain'].includes(key) ? key : '')})));
     }
     if (entries.length) return entries;
     const portPolarity = /^(ControlNetApplyAdvanced|InpaintModelConditioning)$/.test(n.type) && ref.slot <= 1
       ? (ref.slot === 0 ? 'positive' : 'negative') : polarity;
     if (ins[portPolarity] != null) return promptTexts(ins[portPolarity], portPolarity, seen);
     for (const [key, input] of Object.entries(ins)) {
-      if (/^conditioning(?:_\d+)?$|^conditionings?$|^conditioning_(?:to|from)$|^cond[12]$|^guider$|(?:^|_)pipe(?:_opt)?$|^input$/.test(key)) {
+      if (/^conditioning(?:_\d+)?$|^conditionings?$|^conditioning_(?:to|from)$|^cond[12]$|^guider$|^artist_pack$|(?:^|_)pipe(?:_opt)?$|^input$|^source$|^value$/.test(key)) {
         if (key === 'conditioning' && polarity === 'negative' && /BasicGuider/i.test(n.type)) continue;
         entries.push(...promptTexts(input, polarity, new Set(seen)));
       }
@@ -3048,6 +3270,14 @@ function buildComfyView(meta) {
       }
       // Efficient loaders may embed LoRA settings instead of using a separate LoRA node.
       if (!/lora/i.test(n.type) && !Object.keys(ins).some(key => /^lora_name/.test(key))) continue;
+      for (const key of ['loras', 'lora_str']) {
+        const stack = typeof ins[key] === 'string' ? parseComfyJSON(ins[key]) : ins[key];
+        if (!Array.isArray(stack)) continue;
+        for (const item of stack) if (item && typeof item === 'object')
+          addLora(n, item.name ?? item.lora_name, item.strength ?? item.weight ?? item.strength_model,
+            item.clipStrength ?? item.text_encoder_weight ?? item.strength_clip,
+            ![false, 0, 'false'].includes(item.active) && ![false, 0, 'false'].includes(item.enabled) && item.disabled !== true);
+      }
       if ([ins.on, ins.enabled].some(v => v === false || v === 0 || v === 'false' || v === 'off')) continue;
       for (const [key, value] of Object.entries(ins)) {
         if (/^lora_name(?:_?\d+)?$|^lora_\d+$|^lora$/i.test(key)) {
@@ -3068,8 +3298,8 @@ function buildComfyView(meta) {
     return { models: uniq(models, m => m.kind + ':' + m.name), loras: uniq(loras, l => JSON.stringify(l)) };
   }
   const labels = {
-    seed: '种子 Seed', noise_seed: '种子 Seed', steps: '步数 Steps', cfg: 'CFG', sampler_name: '采样器', scheduler: '调度器',
-    denoise: '重绘强度 Denoise', guidance: 'Guidance', add_noise: '添加噪声', start_at_step: '开始步数', end_at_step: '结束步数',
+    seed: '种子 Seed', noise_seed: '种子 Seed', steps: '步数 Steps', cfg: 'CFG', cfg_scale: 'CFG', sampler_name: '采样器', sampler: '采样器', scheduler: '调度器', flow_solver: 'Flow 采样器', flow_schedule: 'Flow 调度器', flow_shift: 'Flow Shift', cfg_mode: 'CFG 模式',
+    denoise: '重绘强度 Denoise', denoise_strength: '重绘强度 Denoise', guidance: 'Guidance', add_noise: '添加噪声', start_at_step: '开始步数', end_at_step: '结束步数',
     return_with_leftover_noise: '保留剩余噪声', width: '宽度', height: '高度', batch_size: '批量',
     upscale_by: '放大倍率', scale_by: '放大倍率', upscale_method: '缩放方法',
     guide_size: '细化尺寸', guide_size_for: '尺寸参照 BBox', max_size: '最大尺寸',
@@ -3112,7 +3342,7 @@ function buildComfyView(meta) {
     const detectorNames = uniq(detectors.flatMap(node => Object.entries(node.inputs).filter(([key]) =>
       /^(model_name|bbox_model_name|sam_model_name|detector_name|labels|label|label_filter)$/.test(key)).map(([, v]) => literal(v)).filter(validName)), x => x);
     // FaceDetailer also handles hands: identify the target from its detector, not its class name.
-    const targetHint = detectorNames.join(' ') + ' ' + n.title;
+    const targetHint = detectorNames.join(' ') + ' ' + n.title + ' ' + n.type;
     const target = /hand|手部|手指/i.test(targetHint) ? '手部优化' : /face|脸|面部/i.test(targetHint) ? '面部优化' : '局部重绘';
     let title;
     if (detail) { detailCount++; title = target + (detectors.some(d => /bbox|ultralytics/i.test(d.type)) ? ' · BBox' : ''); }
@@ -3149,11 +3379,30 @@ function buildComfyView(meta) {
   }
   const notes = [];
   if (graph.source === 'workflow') notes.push('仅含编辑器工作流，按可识别的连线与参数整理。');
-  if (graph.missingWidgets) notes.push('部分自定义节点未记录字段名，其参数保留在原始工作流中。');
+  if (graph.subgraphCount) notes.push(`已展开 ${graph.subgraphCount} 个子工作流。`);
   if (roots.length > 1) notes.push('包含多个图像输出，以下分别保留各条生成分支。');
   if (!roots.length) notes.push('未记录图像输出节点，以下列出已记录的采样阶段。');
-  if (!stages.length) notes.push('未识别到采样阶段，可展开原始工作流查看节点。');
-  return { stages, notes, detailCount, maxDepth: Math.max(0, ...samplingDepth.values()), nodeCount: active.length };
+  const recovered = [];
+  const displayed = [...recorded.positive, ...recorded.negative, ...stages.flatMap(s => [...s.positive, ...s.negative])].map(p => p.text);
+  if (!stages.length || stages.some(s => !s.positive.length)) {
+    for (const n of active) {
+      if (/note|notify|save|preview|loader|lora|expand|caption/i.test(n.type)) continue;
+      const fields = Object.entries(n.inputs).filter(([key, value]) =>
+        typeof value === 'string' && /^(?:text(?:_[gl])?|prompt|base_prompt|artist_chain|value|string(?:_[ab])?)$/.test(key));
+      if (!fields.length && /text|string|prompt/i.test(n.type) && Array.isArray(n.raw?.widgets_values))
+        n.raw.widgets_values.forEach((v, i) => { if (typeof v === 'string') fields.push(['文本 ' + (i + 1), v]); });
+      for (const [key, text] of fields) if (text.trim().length > 20 && !displayed.some(p => p.includes(text.trim()))) {
+        recovered.push({ text, label: `${n.title || n.type} · #${n.id} · ${key}` }); displayed.push(text);
+      }
+    }
+  }
+  if (!stages.length) notes.push('采样阶段尚未完整识别，已保存的生成记录和文本仍可在下方直接复制。');
+  if (graph.truncated || found.truncated) notes.push('工作流较大或存在循环引用，已显示当前可读取的内容。');
+  // A previous server could mislabel a disconnected negative encoder as the
+  // positive fallback. Prefer the classified graph; always retain original infotext.
+  if (stages.some(s => s.positive.length)) recorded.positive = recorded.positive.filter(p => p.label !== '已读取的提示词');
+  if (stages.some(s => s.negative.length)) recorded.negative = recorded.negative.filter(p => p.label !== '已读取的提示词');
+  return { stages, notes, recorded, recovered, detailCount, maxDepth: Math.max(0, ...samplingDepth.values()), nodeCount: active.length };
 }
 
 function comfyEscape(value) { return escapeHtml(String(value ?? '')); }
@@ -3169,15 +3418,24 @@ function toggleComfyPrompt(button) {
   button.setAttribute('aria-expanded', String(!collapsed));
   button.textContent = collapsed ? '展开全部' : '收起';
 }
-function copyComfySection(button) {
+async function copyComfySection(button) {
   const section = button.closest('.comfy-section');
   const prompts = [...section.querySelectorAll('.comfy-prompt')];
   const text = prompts.length ? prompts.map(el => el.textContent).join('\n\n') : section.querySelector('.comfy-section-content').innerText;
-  if (!navigator.clipboard) { button.textContent = '请手动选择复制'; return; }
-  navigator.clipboard.writeText(text).then(() => {
-    button.textContent = '已复制';
-    setTimeout(() => { button.textContent = '复制'; }, 1500);
-  }).catch(() => { button.textContent = '复制失败'; });
+  let copied = false;
+  if (navigator.clipboard?.writeText) {
+    try { await navigator.clipboard.writeText(text); copied = true; } catch {}
+  }
+  if (!copied) {
+    const field = document.createElement('textarea'), focused = document.activeElement;
+    field.value = text; field.setAttribute('readonly', '');
+    field.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+    document.body.appendChild(field); field.select();
+    try { copied = document.execCommand('copy'); } catch {}
+    field.remove(); focused?.focus({ preventScroll: true });
+  }
+  button.textContent = copied ? '已复制' : '复制失败，请选择文本复制';
+  setTimeout(() => { if (button.isConnected) button.textContent = '复制'; }, 1500);
 }
 function comfySection(number, title, content, tone = '', copy = false) {
   return `<section class="comfy-section ${tone}"><div class="comfy-section-head"><span class="comfy-section-index">${number}</span><span class="comfy-section-title">${title}</span>${copy ? '<button type="button" class="comfy-copy" onclick="copyComfySection(this)">复制</button>' : ''}</div><div class="comfy-section-content">${content}</div></section>`;
@@ -3194,6 +3452,16 @@ function renderComfyView(view, raw) {
   const count = view.stages.length;
   let html = `<div class="comfy-meta"><div class="comfy-overview"><span class="comfy-brand">ComfyUI</span><span class="comfy-badge">${count} 个生成阶段</span>${view.maxDepth > 1 ? `<span class="comfy-badge">${view.maxDepth} 次采样</span>` : ''}${view.detailCount ? `<span class="comfy-badge">${view.detailCount} 处局部优化</span>` : ''}</div>`;
   html += view.notes.map(note => `<p class="comfy-note">${comfyEscape(note)}</p>`).join('');
+  const record = view.recorded;
+  if (record && (record.positive.length || record.negative.length || record.params.length)) {
+    html += '<details class="comfy-stage" open><summary><span>图片记录的生成信息</span></summary><div class="comfy-stage-body">';
+    html += comfySection('1', '正向提示词', comfyPromptHTML(record.positive), 'positive', !!record.positive.length);
+    html += comfySection('2', '负向提示词', comfyPromptHTML(record.negative), 'negative', !!record.negative.length);
+    if (record.models.length) html += comfySection('3', '使用的模型', comfyResourcesHTML(record.models), '', true);
+    if (record.params.length) html += comfySection('4', '生成参数', comfyParamsHTML(record.params), '', true);
+    html += '</div></details>';
+  }
+  if (view.recovered?.length) html += comfySection('＋', '其他已保存的文本（未确定用途）', comfyPromptHTML(view.recovered), '', true);
   for (const stage of view.stages) {
     html += `<details class="comfy-stage${stage.detail ? ' is-detail' : stage.depth > 1 ? ' is-resample' : ''}" open><summary><span>${comfyEscape(stage.title)}</span><span class="comfy-stage-count">#${comfyEscape(stage.id)}</span></summary><div class="comfy-stage-body"><div class="comfy-stage-origin">${comfyEscape(stage.type)}${stage.nodeTitle && stage.nodeTitle !== stage.type ? ' · ' + comfyEscape(stage.nodeTitle) : ''}</div>`;
     html += comfySection('1', '正向提示词', comfyPromptHTML(stage.positive), 'positive', stage.positive.length > 0);
@@ -3702,6 +3970,8 @@ async function handleInspectFile(file) {
 }
 
 function hasInspectGenerationData(data, view) {
+  if (view && (view.recorded?.positive.length || view.recorded?.negative.length || view.recorded?.params.length ||
+    view.stages.some(s => s.positive.length || s.negative.length || s.params.length || s.models.length))) return true;
   if (typeof data.has_useful_generation_data === 'boolean') return data.has_useful_generation_data;
   if ((data.prompt || '').trim() || (data.negative_prompt || '').trim()) return true;
   if (view && view.stages.some(s => s.positive.length || s.negative.length || s.params.length || s.models.length)) return true;
@@ -3879,7 +4149,7 @@ function renderInspectResult(container, data, file, previewUrl) {
   if (comfyView) html += renderComfyView(comfyView, JSON.stringify(data.deep_analysis ? {params_dict: data.params_dict} : data, null, 2));
 
   // Prompt
-  if (data.prompt) {
+  if (!comfyView && data.prompt) {
     html += `<div class="inspect-result-section">
       <div class="inspect-result-section-title">Prompt</div>
       ${inspectTextBlock(data.prompt)}
@@ -3887,7 +4157,7 @@ function renderInspectResult(container, data, file, previewUrl) {
   }
 
   // Negative Prompt
-  if (data.negative_prompt) {
+  if (!comfyView && data.negative_prompt) {
     html += `<div class="inspect-result-section">
       <div class="inspect-result-section-title">Negative Prompt</div>
       ${inspectTextBlock(data.negative_prompt)}
@@ -3977,10 +4247,10 @@ function renderInspectResult(container, data, file, previewUrl) {
 
   // Copy buttons
   html += `<div class="inspect-copy-row">`;
-  if (data.prompt) {
+  if (!comfyView && data.prompt) {
     html += `<button class="inspect-copy-btn" onclick="copyInspectField('prompt')">复制 Prompt</button>`;
   }
-  if (data.negative_prompt) {
+  if (!comfyView && data.negative_prompt) {
     html += `<button class="inspect-copy-btn" onclick="copyInspectField('negative_prompt')">复制 Negative</button>`;
   }
   html += `<button class="inspect-copy-btn" onclick="copyInspectAll()">复制全部 JSON</button>`;
